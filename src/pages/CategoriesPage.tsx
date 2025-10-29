@@ -165,7 +165,7 @@ const CategoriesPage = () => {
         throw error;
       }
 
-      await loadData();
+      setCategories(prev => [...prev, data]);
       setNewCategory("");
       
       toast({
