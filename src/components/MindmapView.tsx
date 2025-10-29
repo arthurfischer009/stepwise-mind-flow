@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Network, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -35,13 +35,9 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
   const [loading, setLoading] = useState(false);
   const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null);
   const [insights, setInsights] = useState<any>(null);
-  const [lastTaskCount, setLastTaskCount] = useState(0);
   const { toast } = useToast();
 
-  // Auto-generate on mount and when tasks increase
-  const shouldGenerate = tasks.length >= 3 && tasks.length !== lastTaskCount;
-
-  const generateMindmap = async (showToast = true) => {
+  const generateMindmap = async () => {
     if (tasks.length < 3) {
       toast({
         title: "Need More Data",
@@ -56,9 +52,7 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
     try {
       const supabase = await getSupabase();
       if (!supabase) {
-        if (showToast) {
-          toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        }
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
         setLoading(false);
         return;
       }
@@ -83,35 +77,23 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
       if (data.hierarchy?.themes?.length > 0) {
         setHierarchy(data.hierarchy);
         setInsights(data.insights);
-        setLastTaskCount(tasks.length);
         
-        if (showToast) {
-          toast({
-            title: "Network Updated!",
-            description: `${data.hierarchy.themes.length} themes organized`,
-          });
-        }
+        toast({
+          title: "Network Updated!",
+          description: `${data.hierarchy.themes.length} themes organized`,
+        });
       }
     } catch (error: any) {
       console.error('Error generating mindmap:', error);
-      if (showToast) {
-        toast({
-          title: "Update Failed",
-          description: error.message || "Network error - try again",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Update Failed",
+        description: error.message || "Network error - try again",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
-
-  // Auto-generate when tasks change
-  useEffect(() => {
-    if (shouldGenerate && !loading) {
-      generateMindmap(false);
-    }
-  }, [tasks.length]);
 
   return (
     <div className="space-y-4">
@@ -122,14 +104,23 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
           {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
         </div>
         <Button
-          onClick={() => generateMindmap(true)}
+          onClick={generateMindmap}
           disabled={loading || tasks.length < 3}
           variant="outline"
           size="sm"
           className="gap-2"
         >
-          <Network className="w-4 h-4" />
-          Refresh
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            <>
+              <Network className="w-4 h-4" />
+              Refresh
+            </>
+          )}
         </Button>
       </div>
 
