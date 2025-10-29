@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Network, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -35,9 +35,13 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
   const [loading, setLoading] = useState(false);
   const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null);
   const [insights, setInsights] = useState<any>(null);
+  const [lastTaskCount, setLastTaskCount] = useState(0);
   const { toast } = useToast();
 
-  const generateMindmap = async () => {
+  // Auto-generate on mount and when tasks increase
+  const shouldGenerate = tasks.length >= 3 && tasks.length !== lastTaskCount;
+
+  const generateMindmap = async (showToast = true) => {
     if (tasks.length < 3) {
       toast({
         title: "Need More Data",
@@ -48,13 +52,13 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
     }
 
     setLoading(true);
-    setHierarchy(null); // Clear old data
-    setInsights(null);
     
     try {
       const supabase = await getSupabase();
       if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        if (showToast) {
+          toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        }
         setLoading(false);
         return;
       }
@@ -79,29 +83,35 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
       if (data.hierarchy?.themes?.length > 0) {
         setHierarchy(data.hierarchy);
         setInsights(data.insights);
+        setLastTaskCount(tasks.length);
         
-        toast({
-          title: "Network Generated!",
-          description: `Created ${data.hierarchy.themes.length} themes`,
-        });
-      } else {
-        toast({
-          title: "No Structure Found",
-          description: "Try adding more tasks with different categories",
-          variant: "destructive",
-        });
+        if (showToast) {
+          toast({
+            title: "Network Updated!",
+            description: `${data.hierarchy.themes.length} themes organized`,
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error generating mindmap:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Network error - try again",
-        variant: "destructive",
-      });
+      if (showToast) {
+        toast({
+          title: "Update Failed",
+          description: error.message || "Network error - try again",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-generate when tasks change
+  useEffect(() => {
+    if (shouldGenerate && !loading) {
+      generateMindmap(false);
+    }
+  }, [tasks.length]);
 
   return (
     <div className="space-y-4">
@@ -109,34 +119,19 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
         <div className="flex items-center gap-2">
           <Network className="w-5 h-5 text-secondary" />
           <h3 className="text-lg font-semibold">Knowledge Network</h3>
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
         </div>
         <Button
-          onClick={generateMindmap}
+          onClick={() => generateMindmap(true)}
           disabled={loading || tasks.length < 3}
           variant="outline"
           size="sm"
           className="gap-2"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Network className="w-4 h-4" />
-              Generate Map
-            </>
-          )}
+          <Network className="w-4 h-4" />
+          Refresh
         </Button>
       </div>
-
-      {loading && (
-        <div className="flex items-center justify-center p-8 text-muted-foreground">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          <span>Analyzing your tasks...</span>
-        </div>
-      )}
 
       {!loading && hierarchy && hierarchy.themes.length > 0 && (
         <div className="space-y-3">

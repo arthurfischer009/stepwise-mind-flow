@@ -130,96 +130,102 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
         </div>
       </form>
 
-      {/* AI Suggestions Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Suggestions</span>
-          </div>
-          <Button
-            onClick={generateSuggestions}
-            disabled={loading || tasks.filter(t => t.completed).length === 0}
-            variant="outline"
-            size="sm"
-            className="gap-1.5 h-7 text-xs"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Thinking...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3 h-3" />
-                Get Ideas
-              </>
-            )}
-          </Button>
-        </div>
-
-      {suggestions.length > 0 && (
+      {/* Suggestions and Task List Side by Side */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* AI Suggestions Column */}
         <div className="space-y-2">
-          {Object.entries(
-            suggestions.reduce((acc, suggestion) => {
-              const cat = suggestion.category || 'Other';
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(suggestion);
-              return acc;
-            }, {} as Record<string, Suggestion[]>)
-          ).map(([category, items]) => (
-            <div key={category} className="space-y-1">
-              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                {category}
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {items.slice(0, 4).map((suggestion, index) => (
-                  <div
-                    key={index}
-                    className="p-1.5 rounded bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
-                    onClick={() => applySuggestion(suggestion)}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="font-medium text-xs truncate leading-tight">{suggestion.title}</div>
-                      <Plus className="w-3 h-3 flex-shrink-0 text-primary" />
-                    </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Suggestions</span>
+            </div>
+            <Button
+              onClick={generateSuggestions}
+              disabled={loading || tasks.filter(t => t.completed).length === 0}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-7 text-xs"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Thinking...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3 h-3" />
+                  Get Ideas
+                </>
+              )}
+            </Button>
+          </div>
+
+          {suggestions.length > 0 && (
+            <div className="space-y-2">
+              {Object.entries(
+                suggestions.reduce((acc, suggestion) => {
+                  const cat = suggestion.category || 'Other';
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(suggestion);
+                  return acc;
+                }, {} as Record<string, Suggestion[]>)
+              ).map(([category, items]) => (
+                <div key={category} className="space-y-1">
+                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    {category}
                   </div>
+                  <div className="space-y-1">
+                    {items.slice(0, 4).map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="p-1.5 rounded bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
+                        onClick={() => applySuggestion(suggestion)}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="font-medium text-xs truncate leading-tight">{suggestion.title}</div>
+                          <Plus className="w-3 h-3 flex-shrink-0 text-primary" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tasks.filter(t => t.completed).length === 0 && suggestions.length === 0 && (
+            <div className="text-center text-[10px] text-muted-foreground p-2 border border-dashed rounded">
+              Complete tasks to unlock AI suggestions
+            </div>
+          )}
+
+          {/* Quick Start Suggestions */}
+          {tasks.length === 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Quick start ideas:</span>
+              </div>
+              <div className="space-y-1">
+                {quickSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setNewTask(suggestion)}
+                    className="w-full text-left p-2 rounded bg-card border border-border hover:border-primary transition-all text-xs"
+                  >
+                    {suggestion}
+                  </button>
                 ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
-      )}
 
-        {tasks.filter(t => t.completed).length === 0 && suggestions.length === 0 && (
-          <div className="text-center text-[10px] text-muted-foreground p-2 border border-dashed rounded">
-            Complete tasks to unlock AI suggestions
-          </div>
-        )}
+        {/* Task List Column */}
+        <div>
+          <TaskList tasks={tasks} onDeleteTask={onDeleteTask} />
+        </div>
       </div>
-
-      {/* Quick Start Suggestions */}
-      {tasks.length === 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Quick start ideas:</span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {quickSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => setNewTask(suggestion)}
-                className="text-left p-2 rounded bg-card border border-border hover:border-primary transition-all text-xs"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <TaskList tasks={tasks} onDeleteTask={onDeleteTask} />
     </div>
   );
 };
