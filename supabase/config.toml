@@ -1,1 +1,7 @@
 project_id = "fwiaqwojpbonojpuggah"
+
+[functions.ai-suggest-tasks]
+verify_jwt = false
+
+[functions.ai-generate-mindmap]
+verify_jwt = false

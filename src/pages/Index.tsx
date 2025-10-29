@@ -1,55 +1,144 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CurrentLevel } from "@/components/CurrentLevel";
 import { TaskPlanner } from "@/components/TaskPlanner";
 import { ProgressStats } from "@/components/ProgressStats";
+import { AISuggestions } from "@/components/AISuggestions";
+import { MindmapView } from "@/components/MindmapView";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Task {
   id: string;
   title: string;
   category?: string;
   completed: boolean;
+  completed_at?: string;
+  created_at?: string;
 }
 
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [level, setLevel] = useState(1);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Load tasks from database
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setTasks(data || []);
+      setLevel(1 + (data?.filter(t => t.completed).length || 0));
+    } catch (error: any) {
+      console.error('Error loading tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const currentTask = tasks.find((t) => !t.completed) || null;
   const completedToday = tasks.filter((t) => t.completed).length;
 
-  const handleAddTask = (title: string, category?: string) => {
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      title,
-      category,
-      completed: false,
-    };
-    setTasks((prev) => [...prev, newTask]);
-    toast({
-      title: "Task Added",
-      description: "New challenge accepted!",
-    });
+  const handleAddTask = async (title: string, category?: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({ title, category, completed: false })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTasks((prev) => [...prev, data]);
+      toast({
+        title: "Task Added",
+        description: "New challenge accepted!",
+      });
+    } catch (error: any) {
+      console.error('Error adding task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add task",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleCompleteTask = () => {
+  const handleCompleteTask = async () => {
     if (!currentTask) return;
 
-    setTasks((prev) =>
-      prev.map((t) => (t.id === currentTask.id ? { ...t, completed: true } : t))
-    );
-    setLevel((prev) => prev + 1);
-    
-    toast({
-      title: "Level Complete! 🎉",
-      description: `You've reached Level ${level + 1}`,
-    });
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: true, completed_at: new Date().toISOString() })
+        .eq('id', currentTask.id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === currentTask.id ? { ...t, completed: true, completed_at: new Date().toISOString() } : t))
+      );
+      setLevel((prev) => prev + 1);
+      
+      toast({
+        title: "Level Complete! 🎉",
+        description: `You've reached Level ${level + 1}`,
+      });
+    } catch (error: any) {
+      console.error('Error completing task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete task",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  const handleDeleteTask = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your quest...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -78,11 +167,32 @@ const Index = () => {
           </div>
 
           <div className="rounded-2xl bg-card border border-border p-8">
-            <TaskPlanner
-              tasks={tasks}
-              onAddTask={handleAddTask}
-              onDeleteTask={handleDeleteTask}
-            />
+            <Tabs defaultValue="planner" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="planner">Planner</TabsTrigger>
+                <TabsTrigger value="ai">AI Assist</TabsTrigger>
+                <TabsTrigger value="mindmap">Network</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="planner" className="mt-0">
+                <TaskPlanner
+                  tasks={tasks}
+                  onAddTask={handleAddTask}
+                  onDeleteTask={handleDeleteTask}
+                />
+              </TabsContent>
+              
+              <TabsContent value="ai" className="mt-0">
+                <AISuggestions
+                  tasks={tasks}
+                  onAddTask={handleAddTask}
+                />
+              </TabsContent>
+              
+              <TabsContent value="mindmap" className="mt-0">
+                <MindmapView tasks={tasks} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
