@@ -19,16 +19,28 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Identify top 5 most active categories
+    const categoryCounts = completedTasks.reduce((acc: Record<string, number>, task: any) => {
+      const cat = task.category || 'Other';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const topCategories = Object.entries(categoryCounts)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 5)
+      .map(([cat]) => cat);
+
     const systemPrompt = `You are a productivity AI assistant for Focus Quest, a game-like task management app. 
-    Analyze the user's completed tasks and suggest 3-4 relevant next tasks PER CATEGORY.
+    Analyze the user's completed tasks and suggest 2-3 relevant next tasks for EACH of the top active categories.
     Consider task categories, timing, and logical progression within each category.
-    Make suggestions actionable and specific.`;
+    Make suggestions actionable and specific. Keep total suggestions to 10-15 tasks maximum.`;
 
     const userPrompt = `Based on these completed tasks: ${JSON.stringify(completedTasks)}
-    And current categories: ${JSON.stringify(currentCategories)}
+    Focus on these top active categories: ${JSON.stringify(topCategories)}
     
-    For EACH existing category, suggest 3-4 new tasks that would be good next steps. 
-    Generate suggestions for all categories that have completed tasks.`;
+    For EACH of these categories, suggest 2-3 new tasks that would be good next steps. 
+    Prioritize the most active categories first. Limit total output to 10-15 suggestions.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -47,7 +59,7 @@ serve(async (req) => {
             type: 'function',
             function: {
               name: 'suggest_tasks',
-              description: 'Return 3-4 task suggestions PER category',
+              description: 'Return 2-3 task suggestions per top category, max 10-15 total',
               parameters: {
                 type: 'object',
                 properties: {
