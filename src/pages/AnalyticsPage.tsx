@@ -29,6 +29,7 @@ import {
   Radar,
 } from "recharts";
 import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
+import { getCustomDayStart, getCustomDayEnd, getCustomDayBoundaries } from "@/lib/dateUtils";
 
 interface Task {
   id: string;
@@ -125,27 +126,23 @@ const AnalyticsPage = () => {
     }
   };
 
-  // Chart 1: Tasks completed over last 7 days
+  // Chart 1: Tasks completed over last 7 days (custom day starts at 5 AM)
   const getLast7DaysData = () => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = subDays(new Date(), 6 - i);
+      const daysAgo = 6 - i;
+      const { start, end } = getCustomDayBoundaries(daysAgo);
+      
       return {
-        date: format(date, 'MMM dd'),
+        date: format(start, 'MMM dd'),
         completed: tasks.filter(t => {
           if (!t.completed || !t.completed_at) return false;
           const completedDate = parseISO(t.completed_at);
-          return isWithinInterval(completedDate, {
-            start: startOfDay(date),
-            end: endOfDay(date)
-          });
+          return isWithinInterval(completedDate, { start, end });
         }).length,
         points: tasks.filter(t => {
           if (!t.completed || !t.completed_at) return false;
           const completedDate = parseISO(t.completed_at);
-          return isWithinInterval(completedDate, {
-            start: startOfDay(date),
-            end: endOfDay(date)
-          });
+          return isWithinInterval(completedDate, { start, end });
         }).reduce((sum, t) => sum + (t.points || 1), 0)
       };
     });
@@ -219,20 +216,20 @@ const AnalyticsPage = () => {
     }).filter((_, index, arr) => index === 0 || index === arr.length - 1 || index % Math.ceil(arr.length / 10) === 0);
   };
 
-  // Chart 6: Task velocity (tasks per day average)
+  // Chart 6: Task velocity (tasks per day average) - custom day
   const getTaskVelocity = () => {
     const last14Days = Array.from({ length: 14 }, (_, i) => {
-      const date = subDays(new Date(), 13 - i);
+      const daysAgo = 13 - i;
+      const { start, end } = getCustomDayBoundaries(daysAgo);
+      
       const completed = tasks.filter(t => {
         if (!t.completed || !t.completed_at) return false;
         const completedDate = parseISO(t.completed_at);
-        return isWithinInterval(completedDate, {
-          start: startOfDay(date),
-          end: endOfDay(date)
-        });
+        return isWithinInterval(completedDate, { start, end });
       }).length;
+      
       return {
-        date: format(date, 'MMM dd'),
+        date: format(start, 'MMM dd'),
         completed,
         avg: 0
       };
@@ -258,14 +255,19 @@ const AnalyticsPage = () => {
     }));
   };
 
-  // Chart 8: Weekly comparison
+  // Chart 8: Weekly comparison (custom day)
   const getWeeklyComparison = () => {
+    const thisWeekStart = getCustomDayBoundaries(7).start;
+    const thisWeekEnd = getCustomDayBoundaries(0).end;
+    const lastWeekStart = getCustomDayBoundaries(14).start;
+    const lastWeekEnd = getCustomDayBoundaries(7).end;
+    
     const thisWeek = tasks.filter(t => {
       if (!t.completed || !t.completed_at) return false;
       const completedDate = parseISO(t.completed_at);
       return isWithinInterval(completedDate, {
-        start: startOfDay(subDays(new Date(), 7)),
-        end: endOfDay(new Date())
+        start: thisWeekStart,
+        end: thisWeekEnd
       });
     }).length;
 
@@ -273,8 +275,8 @@ const AnalyticsPage = () => {
       if (!t.completed || !t.completed_at) return false;
       const completedDate = parseISO(t.completed_at);
       return isWithinInterval(completedDate, {
-        start: startOfDay(subDays(new Date(), 14)),
-        end: endOfDay(subDays(new Date(), 7))
+        start: lastWeekStart,
+        end: lastWeekEnd
       });
     }).length;
 
@@ -283,16 +285,16 @@ const AnalyticsPage = () => {
         if (!t.completed || !t.completed_at) return false;
         const completedDate = parseISO(t.completed_at);
         return isWithinInterval(completedDate, {
-          start: startOfDay(subDays(new Date(), 14)),
-          end: endOfDay(subDays(new Date(), 7))
+          start: lastWeekStart,
+          end: lastWeekEnd
         });
       }).reduce((sum, t) => sum + (t.points || 1), 0) },
       { period: 'This Week', completed: thisWeek, points: tasks.filter(t => {
         if (!t.completed || !t.completed_at) return false;
         const completedDate = parseISO(t.completed_at);
         return isWithinInterval(completedDate, {
-          start: startOfDay(subDays(new Date(), 7)),
-          end: endOfDay(new Date())
+          start: thisWeekStart,
+          end: thisWeekEnd
         });
       }).reduce((sum, t) => sum + (t.points || 1), 0) }
     ];

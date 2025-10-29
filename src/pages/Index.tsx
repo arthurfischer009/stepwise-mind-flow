@@ -10,6 +10,8 @@ import { Network, BarChart3, LogOut } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
+import { isWithinInterval, parseISO } from "date-fns";
+import { getCustomDayBoundaries } from "@/lib/dateUtils";
 
 interface Task {
   id: string;
@@ -129,7 +131,15 @@ const Index = () => {
   };
 
   const currentTask = tasks.find((t) => !t.completed) || null;
-  const completedToday = tasks.filter((t) => t.completed).length;
+  
+  // Calculate completed today based on custom day (5 AM start)
+  const { start: todayStart, end: todayEnd } = getCustomDayBoundaries(0);
+  const completedToday = tasks.filter((t) => {
+    if (!t.completed || !t.completed_at) return false;
+    const completedDate = parseISO(t.completed_at);
+    return isWithinInterval(completedDate, { start: todayStart, end: todayEnd });
+  }).length;
+  
   const totalPoints = tasks
     .filter((t) => t.completed)
     .reduce((sum, t) => sum + (t.points || 1), 0);
@@ -373,7 +383,7 @@ const Index = () => {
               Sign Out
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">One task. One level. Total focus.</p>
+          <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
