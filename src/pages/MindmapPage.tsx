@@ -150,28 +150,28 @@ const MindmapPage = () => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    // Central node
+    // Level 1: Central node at the top
     const centerX = 600;
-    const centerY = 400;
+    const level1Y = 50;
     
     newNodes.push({
       id: 'central',
       type: 'central',
-      position: { x: centerX, y: centerY },
+      position: { x: centerX, y: level1Y },
       data: { 
         label: 'My Quest'
       } as CentralNodeData,
     });
 
-    // Radial layout - categories arranged in a circle around the center
+    // Level 2: Categories arranged horizontally below central node
     const categoryArray = Array.from(categories.keys());
-    const radius = 300; // Distance from center to categories
-    const angleStep = (2 * Math.PI) / categoryArray.length;
+    const level2Y = 200;
+    const categorySpacing = 250;
+    const totalCategoryWidth = (categoryArray.length - 1) * categorySpacing;
+    const categoryStartX = centerX - totalCategoryWidth / 2;
 
     categoryArray.forEach((category, idx) => {
-      const angle = idx * angleStep - Math.PI / 2; // Start from top
-      const categoryX = centerX + radius * Math.cos(angle);
-      const categoryY = centerY + radius * Math.sin(angle);
+      const categoryX = categoryStartX + idx * categorySpacing;
       const categoryTasks = categories.get(category) || [];
       const isExpanded = expandedCategories.has(category);
 
@@ -179,7 +179,7 @@ const MindmapPage = () => {
       newNodes.push({
         id: `cat-${category}`,
         type: 'category',
-        position: { x: categoryX, y: categoryY },
+        position: { x: categoryX, y: level2Y },
         data: { 
           label: category,
           taskCount: categoryTasks.length,
@@ -202,20 +202,18 @@ const MindmapPage = () => {
         animated: false,
       });
 
-      // Only show task nodes if category is expanded
+      // Level 3: Tasks arranged vertically below each category (if expanded)
       if (isExpanded) {
-        const taskRadius = 150; // Distance from category to tasks
-        const taskAngleStep = (2 * Math.PI) / Math.max(categoryTasks.length, 1);
+        const level3StartY = 370;
+        const taskVerticalSpacing = 70;
 
         categoryTasks.forEach((task, taskIdx) => {
-          const taskAngle = taskIdx * taskAngleStep;
-          const taskX = categoryX + taskRadius * Math.cos(angle + taskAngle);
-          const taskY = categoryY + taskRadius * Math.sin(angle + taskAngle);
+          const taskY = level3StartY + taskIdx * taskVerticalSpacing;
 
           newNodes.push({
             id: task.id,
             type: 'task',
-            position: { x: taskX, y: taskY },
+            position: { x: categoryX, y: taskY },
             data: { 
               label: task.title,
               completed: task.completed
