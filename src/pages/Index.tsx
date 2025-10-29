@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { CurrentLevel } from "@/components/CurrentLevel";
 import { TaskPlanner } from "@/components/TaskPlanner";
 import { ProgressStats } from "@/components/ProgressStats";
-import { AISuggestions } from "@/components/AISuggestions";
 import { MindmapView } from "@/components/MindmapView";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -196,9 +195,8 @@ const Index = () => {
 
           <div className="rounded-2xl bg-card border border-border p-8">
             <Tabs defaultValue="planner" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="planner">Planner</TabsTrigger>
-                <TabsTrigger value="ai">AI Assist</TabsTrigger>
                 <TabsTrigger value="mindmap">Network</TabsTrigger>
               </TabsList>
               
@@ -207,13 +205,6 @@ const Index = () => {
                   tasks={tasks}
                   onAddTask={handleAddTask}
                   onDeleteTask={handleDeleteTask}
-                />
-              </TabsContent>
-              
-              <TabsContent value="ai" className="mt-0">
-                <AISuggestions
-                  tasks={tasks}
-                  onAddTask={handleAddTask}
                 />
               </TabsContent>
               

@@ -19,19 +19,26 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const systemPrompt = `You are an AI that analyzes task relationships to create knowledge graphs.
-    Identify connections between tasks based on:
-    - Shared categories or themes
-    - Sequential dependencies (one task leads to another)
-    - Related subject matter or skills
-    - Workflow patterns
+    const systemPrompt = `You are an AI that creates hierarchical knowledge structures from tasks.
     
-    Return relationships with strength (0-1) indicating connection intensity.`;
+    Your job:
+    1. IDENTIFY core themes/domains from tasks (3-4 main themes max)
+    2. GROUP tasks under these themes hierarchically (Level 0: theme → Level 1: subtheme → Level 2: task groups → Level 3: individual tasks)
+    3. CREATE connections showing how tasks relate within and across themes
+    4. DETECT workflow patterns and dependencies
+    
+    Create a clear 3-4 level hierarchy where themes naturally emerge from the data.`;
 
-    const userPrompt = `Analyze these tasks and identify meaningful relationships:
+    const userPrompt = `Analyze and organize these tasks into a hierarchical structure:
     ${JSON.stringify(tasks, null, 2)}
     
-    Create a network of connections showing how these tasks relate to each other.`;
+    Build a 3-4 level hierarchy:
+    - Level 0: Main themes/domains (3-4 max)
+    - Level 1: Sub-themes or project areas  
+    - Level 2: Task clusters
+    - Level 3: Individual tasks
+    
+    Show connections between related items across and within levels.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -50,10 +57,57 @@ serve(async (req) => {
             type: 'function',
             function: {
               name: 'create_mindmap',
-              description: 'Create task relationship network for mindmap visualization',
+              description: 'Create hierarchical knowledge structure with 3-4 levels',
               parameters: {
                 type: 'object',
                 properties: {
+                  hierarchy: {
+                    type: 'object',
+                    properties: {
+                      themes: {
+                        type: 'array',
+                        description: 'Level 0: Main themes (3-4 max)',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            subthemes: {
+                              type: 'array',
+                              description: 'Level 1: Sub-themes',
+                              items: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string' },
+                                  name: { type: 'string' },
+                                  clusters: {
+                                    type: 'array',
+                                    description: 'Level 2: Task clusters',
+                                    items: {
+                                      type: 'object',
+                                      properties: {
+                                        id: { type: 'string' },
+                                        name: { type: 'string' },
+                                        task_ids: { 
+                                          type: 'array',
+                                          description: 'Level 3: Individual task IDs',
+                                          items: { type: 'string' }
+                                        }
+                                      },
+                                      required: ['id', 'name', 'task_ids']
+                                    }
+                                  }
+                                },
+                                required: ['id', 'name', 'clusters']
+                              }
+                            }
+                          },
+                          required: ['id', 'name', 'subthemes']
+                        }
+                      }
+                    },
+                    required: ['themes']
+                  },
                   relationships: {
                     type: 'array',
                     items: {
@@ -63,12 +117,11 @@ serve(async (req) => {
                         to_task_id: { type: 'string' },
                         relationship_type: { 
                           type: 'string',
-                          enum: ['sequential', 'related', 'category', 'skill', 'prerequisite']
+                          enum: ['sequential', 'related', 'category', 'prerequisite', 'parallel']
                         },
                         strength: { type: 'number', minimum: 0, maximum: 1 }
                       },
-                      required: ['from_task_id', 'to_task_id', 'relationship_type', 'strength'],
-                      additionalProperties: false
+                      required: ['from_task_id', 'to_task_id', 'relationship_type', 'strength']
                     }
                   },
                   insights: {
@@ -80,7 +133,7 @@ serve(async (req) => {
                     }
                   }
                 },
-                required: ['relationships', 'insights'],
+                required: ['hierarchy', 'relationships', 'insights'],
                 additionalProperties: false
               }
             }
