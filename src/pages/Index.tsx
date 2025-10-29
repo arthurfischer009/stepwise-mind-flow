@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { CurrentLevel } from "@/components/CurrentLevel";
 import { TaskPlanner } from "@/components/TaskPlanner";
 import { ProgressStats } from "@/components/ProgressStats";
-import { MindmapView } from "@/components/MindmapView";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Network } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
 
 interface Task {
@@ -17,12 +18,11 @@ interface Task {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
-  const [mindmapHierarchy, setMindmapHierarchy] = useState<any>(null);
-  const [mindmapInsights, setMindmapInsights] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
@@ -173,10 +173,21 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container max-w-6xl mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
-            Focus Quest
-          </h1>
+        <header className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+              Focus Quest
+            </h1>
+            <Button
+              onClick={() => navigate('/mindmap')}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Network className="w-4 h-4" />
+              View Network
+            </Button>
+          </div>
           <p className="text-muted-foreground">One task. One level. Total focus.</p>
         </header>
 
@@ -197,32 +208,13 @@ const Index = () => {
           </div>
 
           <div className="rounded-2xl bg-card border border-border p-8">
-            <Tabs defaultValue="planner" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="planner">Planner</TabsTrigger>
-                <TabsTrigger value="mindmap">Network</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="planner" className="mt-0">
-                <TaskPlanner
-                  tasks={tasks}
-                  onAddTask={handleAddTask}
-                  onDeleteTask={handleDeleteTask}
-                  suggestions={suggestions}
-                  onSuggestionsChange={setSuggestions}
-                />
-              </TabsContent>
-              
-              <TabsContent value="mindmap" className="mt-0">
-                <MindmapView 
-                  tasks={tasks}
-                  hierarchy={mindmapHierarchy}
-                  insights={mindmapInsights}
-                  onHierarchyChange={setMindmapHierarchy}
-                  onInsightsChange={setMindmapInsights}
-                />
-              </TabsContent>
-            </Tabs>
+            <TaskPlanner
+              tasks={tasks}
+              onAddTask={handleAddTask}
+              onDeleteTask={handleDeleteTask}
+              suggestions={suggestions}
+              onSuggestionsChange={setSuggestions}
+            />
           </div>
         </div>
       </div>
