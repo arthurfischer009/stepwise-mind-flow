@@ -12,38 +12,60 @@ serve(async (req) => {
   }
 
   try {
-    const { completedTasks, currentCategories } = await req.json();
+    const { completedTasks, currentCategories, specificCategory } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Identify top 5 most active categories
-    const categoryCounts = completedTasks.reduce((acc: Record<string, number>, task: any) => {
-      const cat = task.category || 'Other';
-      acc[cat] = (acc[cat] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const topCategories = Object.entries(categoryCounts)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
-      .slice(0, 5)
-      .map(([cat]) => cat);
+    let systemPrompt: string;
+    let userPrompt: string;
+    let targetCategories: string[];
 
-    const systemPrompt = `You are a productivity AI assistant for Focus Quest, a game-like task management app. 
-    Analyze the user's completed tasks and suggest 2-3 SIMILAR follow-up tasks for EACH of the top active categories.
-    CRITICAL: Only suggest tasks that are direct continuations or variations of work they've already done.
-    DO NOT introduce new topics, projects, or categories. Stay within the scope of their existing work.
-    Make suggestions actionable and specific. Keep total suggestions to 10-15 tasks maximum.`;
+    if (specificCategory) {
+      // Generate suggestions for a specific category only
+      targetCategories = [specificCategory];
+      
+      systemPrompt = `You are a productivity AI assistant for Focus Quest, a game-like task management app. 
+      Analyze the user's completed tasks in the "${specificCategory}" category and suggest 3-5 SIMILAR follow-up tasks.
+      CRITICAL: Only suggest tasks that are direct continuations or variations of work they've already done in this category.
+      DO NOT introduce new topics, projects, or categories. Stay within the scope of their existing work in "${specificCategory}".
+      Make suggestions actionable and specific.`;
 
-    const userPrompt = `Based on these completed tasks: ${JSON.stringify(completedTasks)}
-    Focus on these top active categories: ${JSON.stringify(topCategories)}
-    
-    For EACH of these categories, suggest 2-3 follow-up tasks that are SIMILAR to tasks they've already completed.
-    ONLY suggest logical next steps within the same project/topic areas they've already worked on.
-    DO NOT suggest new topics or expand scope beyond what they've already done.
-    Prioritize the most active categories first. Limit total output to 10-15 suggestions.`;
+      userPrompt = `Based on these completed tasks in "${specificCategory}": ${JSON.stringify(completedTasks)}
+      
+      Suggest 3-5 follow-up tasks that are SIMILAR to tasks they've already completed in this category.
+      ONLY suggest logical next steps within the same project/topic areas they've already worked on.
+      DO NOT suggest new topics or expand scope beyond what they've already done.
+      All suggestions must be for the "${specificCategory}" category.`;
+    } else {
+      // Generate suggestions for all top categories
+      const categoryCounts = completedTasks.reduce((acc: Record<string, number>, task: any) => {
+        const cat = task.category || 'Other';
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      targetCategories = Object.entries(categoryCounts)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 5)
+        .map(([cat]) => cat);
+
+      systemPrompt = `You are a productivity AI assistant for Focus Quest, a game-like task management app. 
+      Analyze the user's completed tasks and suggest 2-3 SIMILAR follow-up tasks for EACH of the top active categories.
+      CRITICAL: Only suggest tasks that are direct continuations or variations of work they've already done.
+      DO NOT introduce new topics, projects, or categories. Stay within the scope of their existing work.
+      Make suggestions actionable and specific. Keep total suggestions to 10-15 tasks maximum.`;
+
+      userPrompt = `Based on these completed tasks: ${JSON.stringify(completedTasks)}
+      Focus on these top active categories: ${JSON.stringify(targetCategories)}
+      
+      For EACH of these categories, suggest 2-3 follow-up tasks that are SIMILAR to tasks they've already completed.
+      ONLY suggest logical next steps within the same project/topic areas they've already worked on.
+      DO NOT suggest new topics or expand scope beyond what they've already done.
+      Prioritize the most active categories first. Limit total output to 10-15 suggestions.`;
+    }
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

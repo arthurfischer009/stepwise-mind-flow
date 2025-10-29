@@ -34,16 +34,25 @@ export const AISuggestions = ({
   categoryColors 
 }: AISuggestionsProps) => {
   const [loading, setLoading] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const generateSuggestions = async () => {
-    setLoading(true);
+  const generateSuggestions = async (specificCategory?: string) => {
+    if (specificCategory) {
+      setCategoryLoading(specificCategory);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const completedTasks = tasks
         .filter(t => t.completed)
+        .filter(t => specificCategory ? t.category === specificCategory : true)
         .map(t => ({ title: t.title, category: t.category }));
       
-      const currentCategories = [...new Set(tasks.map(t => t.category).filter(Boolean))];
+      const currentCategories = specificCategory 
+        ? [specificCategory]
+        : [...new Set(tasks.map(t => t.category).filter(Boolean))];
 
       const supabase = await getSupabase();
       if (!supabase) {
@@ -52,17 +61,25 @@ export const AISuggestions = ({
       }
 
       const { data, error } = await supabase.functions.invoke('ai-suggest-tasks', {
-        body: { completedTasks, currentCategories }
+        body: { completedTasks, currentCategories, specificCategory }
       });
 
       if (error) throw error;
 
-      onSuggestionsChange(data.suggestions || []);
+      if (specificCategory) {
+        // Replace suggestions for this category only
+        const otherSuggestions = suggestions.filter(s => s.category !== specificCategory);
+        onSuggestionsChange([...otherSuggestions, ...(data.suggestions || [])]);
+      } else {
+        onSuggestionsChange(data.suggestions || []);
+      }
       
       if (data.suggestions?.length > 0) {
         toast({
           title: "AI Suggestions Ready!",
-          description: `Generated ${data.suggestions.length} task ideas`,
+          description: specificCategory 
+            ? `Generated ${data.suggestions.length} ideas for ${specificCategory}`
+            : `Generated ${data.suggestions.length} task ideas`,
         });
       }
     } catch (error: any) {
@@ -74,6 +91,7 @@ export const AISuggestions = ({
       });
     } finally {
       setLoading(false);
+      setCategoryLoading(null);
     }
   };
 
@@ -95,7 +113,7 @@ export const AISuggestions = ({
           <h2 className="text-base font-bold">AI Suggestions</h2>
         </div>
         <Button
-          onClick={generateSuggestions}
+          onClick={() => generateSuggestions()}
           disabled={loading || tasks.filter(t => t.completed).length === 0}
           variant="outline"
           size="sm"
@@ -147,13 +165,27 @@ export const AISuggestions = ({
             
             const categoryColor = getCategoryColor(category);
             
+            const isLoadingCategory = categoryLoading === category;
+            
             return (
               <div key={category} className="flex-shrink-0 space-y-1.5">
                 <div 
-                  className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full inline-block"
+                  className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full inline-block cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
                   style={{ backgroundColor: categoryColor }}
+                  onClick={() => generateSuggestions(category)}
+                  title="Click to regenerate suggestions for this category"
                 >
-                  {category}
+                  {isLoadingCategory ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {category}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      {category}
+                    </>
+                  )}
                 </div>
                 <div className="space-y-1">
                   {items.map((suggestion, index) => (
