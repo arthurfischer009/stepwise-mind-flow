@@ -278,7 +278,10 @@ const CategoriesPage = () => {
 
       if (error) throw error;
 
-      await loadData();
+      // Update locally without reloading all data
+      setCategories(prev => prev.map(cat => 
+        cat.name === categoryName ? { ...cat, color: newColor } : cat
+      ));
       setEditingColor(null);
       
       toast({
