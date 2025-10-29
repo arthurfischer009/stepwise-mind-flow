@@ -25,8 +25,20 @@ const Index = () => {
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>(() => {
+    const saved = localStorage.getItem('aiSuggestions');
+    return saved ? JSON.parse(saved) : [];
+  });
   const { toast } = useToast();
+
+  // Save suggestions to localStorage whenever they change
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      localStorage.setItem('aiSuggestions', JSON.stringify(suggestions));
+    } else {
+      localStorage.removeItem('aiSuggestions');
+    }
+  }, [suggestions]);
 
   // Create category to color mapping from database
   const categoryColors = categories.reduce((acc, cat) => {

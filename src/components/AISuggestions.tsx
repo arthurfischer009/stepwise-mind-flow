@@ -78,7 +78,8 @@ export const AISuggestions = ({
 
   const applySuggestion = (suggestion: Suggestion) => {
     onAddTask(suggestion.title, suggestion.category);
-    onSuggestionsChange(suggestions.filter(s => s.title !== suggestion.title));
+    const newSuggestions = suggestions.filter(s => s.title !== suggestion.title);
+    onSuggestionsChange(newSuggestions);
     toast({
       title: "Task Added",
       description: suggestion.title,
@@ -123,7 +124,7 @@ export const AISuggestions = ({
               return acc;
             }, {} as Record<string, Suggestion[]>)
           ).map(([category, items]) => {
-            const categoryColor = categoryColors[category] || 'hsl(var(--primary))';
+            const categoryColor = categoryColors[category] || 'hsl(221, 83%, 53%)';
             
             return (
               <div key={category} className="flex-shrink-0 space-y-1.5">
@@ -134,7 +135,7 @@ export const AISuggestions = ({
                   {category}
                 </div>
                 <div className="space-y-1">
-                  {items.slice(0, 6).map((suggestion, index) => (
+                  {items.map((suggestion, index) => (
                     <div
                       key={index}
                       className="w-40 p-1.5 rounded-md border transition-all cursor-pointer hover:shadow-md"
