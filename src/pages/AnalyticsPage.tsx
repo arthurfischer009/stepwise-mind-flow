@@ -1,0 +1,561 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, TrendingUp, Calendar, Award, Target, Clock, Zap, BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getSupabase } from "@/lib/safeSupabase";
+import { useToast } from "@/hooks/use-toast";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts";
+import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
+
+interface Task {
+  id: string;
+  title: string;
+  category?: string;
+  completed: boolean;
+  completed_at?: string;
+  created_at: string;
+  points?: number;
+}
+
+interface Category {
+  name: string;
+  color: string;
+}
+
+const AnalyticsPage = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({
+          title: "Backend not ready",
+          description: "Refresh the page to finish Cloud setup.",
+        });
+        return;
+      }
+
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (tasksError) throw tasksError;
+
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (categoriesError) throw categoriesError;
+
+      setTasks(tasksData || []);
+      setCategories(categoriesData || []);
+    } catch (error: any) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load analytics data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Chart 1: Tasks completed over last 7 days
+  const getLast7DaysData = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      return {
+        date: format(date, 'MMM dd'),
+        completed: tasks.filter(t => {
+          if (!t.completed || !t.completed_at) return false;
+          const completedDate = parseISO(t.completed_at);
+          return isWithinInterval(completedDate, {
+            start: startOfDay(date),
+            end: endOfDay(date)
+          });
+        }).length,
+        points: tasks.filter(t => {
+          if (!t.completed || !t.completed_at) return false;
+          const completedDate = parseISO(t.completed_at);
+          return isWithinInterval(completedDate, {
+            start: startOfDay(date),
+            end: endOfDay(date)
+          });
+        }).reduce((sum, t) => sum + (t.points || 1), 0)
+      };
+    });
+    return last7Days;
+  };
+
+  // Chart 2: Category distribution (Pie)
+  const getCategoryDistribution = () => {
+    const categoryMap = new Map<string, number>();
+    tasks.forEach(task => {
+      const cat = task.category || 'Uncategorized';
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+    });
+    return Array.from(categoryMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+    }));
+  };
+
+  // Chart 3: Completion rate by category
+  const getCompletionByCategory = () => {
+    const categoryMap = new Map<string, { total: number; completed: number }>();
+    tasks.forEach(task => {
+      const cat = task.category || 'Uncategorized';
+      const current = categoryMap.get(cat) || { total: 0, completed: 0 };
+      categoryMap.set(cat, {
+        total: current.total + 1,
+        completed: current.completed + (task.completed ? 1 : 0)
+      });
+    });
+    return Array.from(categoryMap.entries()).map(([name, data]) => ({
+      name,
+      rate: Math.round((data.completed / data.total) * 100),
+      completed: data.completed,
+      pending: data.total - data.completed
+    }));
+  };
+
+  // Chart 4: Points by category
+  const getPointsByCategory = () => {
+    const categoryMap = new Map<string, number>();
+    tasks.filter(t => t.completed).forEach(task => {
+      const cat = task.category || 'Uncategorized';
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + (task.points || 1));
+    });
+    return Array.from(categoryMap.entries()).map(([name, points]) => ({
+      name,
+      points,
+      color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+    }));
+  };
+
+  // Chart 5: Cumulative progress
+  const getCumulativeProgress = () => {
+    const completedTasks = tasks
+      .filter(t => t.completed && t.completed_at)
+      .sort((a, b) => new Date(a.completed_at!).getTime() - new Date(b.completed_at!).getTime());
+
+    let cumulative = 0;
+    let cumulativePoints = 0;
+    return completedTasks.map(task => {
+      cumulative++;
+      cumulativePoints += task.points || 1;
+      return {
+        date: format(parseISO(task.completed_at!), 'MMM dd'),
+        tasks: cumulative,
+        points: cumulativePoints
+      };
+    }).filter((_, index, arr) => index === 0 || index === arr.length - 1 || index % Math.ceil(arr.length / 10) === 0);
+  };
+
+  // Chart 6: Task velocity (tasks per day average)
+  const getTaskVelocity = () => {
+    const last14Days = Array.from({ length: 14 }, (_, i) => {
+      const date = subDays(new Date(), 13 - i);
+      const completed = tasks.filter(t => {
+        if (!t.completed || !t.completed_at) return false;
+        const completedDate = parseISO(t.completed_at);
+        return isWithinInterval(completedDate, {
+          start: startOfDay(date),
+          end: endOfDay(date)
+        });
+      }).length;
+      return {
+        date: format(date, 'MMM dd'),
+        completed,
+        avg: 0
+      };
+    });
+
+    // Calculate moving average
+    return last14Days.map((day, index) => {
+      const windowSize = Math.min(3, index + 1);
+      const avg = last14Days
+        .slice(Math.max(0, index - windowSize + 1), index + 1)
+        .reduce((sum, d) => sum + d.completed, 0) / windowSize;
+      return { ...day, avg: Math.round(avg * 10) / 10 };
+    });
+  };
+
+  // Chart 7: Category performance radar
+  const getCategoryRadarData = () => {
+    return getCompletionByCategory().map(cat => ({
+      category: cat.name,
+      completion: cat.rate,
+      tasks: Math.min(100, cat.completed * 10),
+    }));
+  };
+
+  // Chart 8: Weekly comparison
+  const getWeeklyComparison = () => {
+    const thisWeek = tasks.filter(t => {
+      if (!t.completed || !t.completed_at) return false;
+      const completedDate = parseISO(t.completed_at);
+      return isWithinInterval(completedDate, {
+        start: startOfDay(subDays(new Date(), 7)),
+        end: endOfDay(new Date())
+      });
+    }).length;
+
+    const lastWeek = tasks.filter(t => {
+      if (!t.completed || !t.completed_at) return false;
+      const completedDate = parseISO(t.completed_at);
+      return isWithinInterval(completedDate, {
+        start: startOfDay(subDays(new Date(), 14)),
+        end: endOfDay(subDays(new Date(), 7))
+      });
+    }).length;
+
+    return [
+      { period: 'Last Week', completed: lastWeek, points: tasks.filter(t => {
+        if (!t.completed || !t.completed_at) return false;
+        const completedDate = parseISO(t.completed_at);
+        return isWithinInterval(completedDate, {
+          start: startOfDay(subDays(new Date(), 14)),
+          end: endOfDay(subDays(new Date(), 7))
+        });
+      }).reduce((sum, t) => sum + (t.points || 1), 0) },
+      { period: 'This Week', completed: thisWeek, points: tasks.filter(t => {
+        if (!t.completed || !t.completed_at) return false;
+        const completedDate = parseISO(t.completed_at);
+        return isWithinInterval(completedDate, {
+          start: startOfDay(subDays(new Date(), 7)),
+          end: endOfDay(new Date())
+        });
+      }).reduce((sum, t) => sum + (t.points || 1), 0) }
+    ];
+  };
+
+  // Chart 9: Points distribution
+  const getPointsDistribution = () => {
+    const distribution = new Map<number, number>();
+    tasks.forEach(task => {
+      const points = task.points || 1;
+      distribution.set(points, (distribution.get(points) || 0) + 1);
+    });
+    return Array.from(distribution.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([points, count]) => ({
+        points: `${points} XP`,
+        count
+      }));
+  };
+
+  // Chart 10: Overall stats summary
+  const getOverallStats = () => {
+    const completed = tasks.filter(t => t.completed).length;
+    const totalPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + (t.points || 1), 0);
+    const avgPoints = completed > 0 ? Math.round(totalPoints / completed) : 0;
+    const completionRate = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+
+    return [
+      { metric: 'Total Tasks', value: tasks.length, icon: Target },
+      { metric: 'Completed', value: completed, icon: Award },
+      { metric: 'Total XP', value: totalPoints, icon: Zap },
+      { metric: 'Avg XP/Task', value: avgPoints, icon: TrendingUp },
+      { metric: 'Completion %', value: completionRate, icon: BarChart3 },
+    ];
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container max-w-7xl mx-auto px-4 py-6">
+        <header className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+                Analytics Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground">Track your progress and identify trends</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Overall Stats Cards */}
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          {getOverallStats().map((stat) => (
+            <div
+              key={stat.metric}
+              className="rounded-xl bg-card border border-border p-4 hover:border-primary/50 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <stat.icon className="w-4 h-4 text-primary" />
+                <div className="text-xs text-muted-foreground">{stat.metric}</div>
+              </div>
+              <div className="text-2xl font-bold">{stat.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Chart 1: Daily Progress */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              Last 7 Days Progress
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={getLast7DaysData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Area type="monotone" dataKey="completed" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 2: Category Distribution */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary" />
+              Tasks by Category
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={getCategoryDistribution()}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="hsl(var(--primary))"
+                  dataKey="value"
+                >
+                  {getCategoryDistribution().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 3: Completion Rate by Category */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Completion Rate by Category
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={getCompletionByCategory()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Legend />
+                <Bar dataKey="completed" fill="hsl(var(--primary))" />
+                <Bar dataKey="pending" fill="hsl(var(--muted))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 4: Points by Category */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              XP Earned by Category
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={getPointsByCategory()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Bar dataKey="points" fill="hsl(var(--accent))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 5: Cumulative Progress */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Cumulative Progress
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={getCumulativeProgress()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="tasks" stroke="hsl(var(--primary))" strokeWidth={2} />
+                <Line type="monotone" dataKey="points" stroke="hsl(var(--accent))" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 6: Task Velocity */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              Task Velocity (14 Days)
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={getTaskVelocity()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="completed" stroke="hsl(var(--secondary))" strokeWidth={2} />
+                <Line type="monotone" dataKey="avg" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 7: Category Performance Radar */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary" />
+              Category Performance
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <RadarChart data={getCategoryRadarData()}>
+                <PolarGrid stroke="hsl(var(--border))" />
+                <PolarAngleAxis dataKey="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <PolarRadiusAxis stroke="hsl(var(--muted-foreground))" />
+                <Radar name="Completion %" dataKey="completion" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.5} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 8: Weekly Comparison */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              Weekly Comparison
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={getWeeklyComparison()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="period" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Legend />
+                <Bar dataKey="completed" fill="hsl(var(--primary))" />
+                <Bar dataKey="points" fill="hsl(var(--accent))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 9: Points Distribution */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Award className="w-4 h-4 text-primary" />
+              XP Distribution
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={getPointsDistribution()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="points" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Bar dataKey="count" fill="hsl(var(--secondary))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Chart 10: Points per Day */}
+          <div className="rounded-xl bg-card border border-border p-4">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              XP Earned (Last 7 Days)
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={getLast7DaysData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Area type="monotone" dataKey="points" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AnalyticsPage;

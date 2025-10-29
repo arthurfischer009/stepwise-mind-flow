@@ -6,7 +6,7 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network } from "lucide-react";
+import { Network, BarChart3 } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
 
 interface Task {
@@ -289,6 +289,15 @@ const Index = () => {
               className="gap-2"
             >
               Categories
+            </Button>
+            <Button
+              onClick={() => navigate('/analytics')}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">One task. One level. Total focus.</p>
