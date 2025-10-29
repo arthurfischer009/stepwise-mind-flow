@@ -13,32 +13,40 @@ interface Task {
   completed: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
+
 const CategoriesPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editingColor, setEditingColor] = useState<string | null>(null);
 
   const categoryColorPalette = [
-    'hsl(var(--primary))',
-    'hsl(var(--secondary))',
-    'hsl(var(--accent))',
-    'hsl(280, 80%, 60%)',
-    'hsl(200, 80%, 60%)',
-    'hsl(160, 80%, 50%)',
-    'hsl(30, 90%, 60%)',
-    'hsl(340, 80%, 60%)',
+    'hsl(221, 83%, 53%)',   // Blue
+    'hsl(142, 76%, 36%)',   // Green
+    'hsl(262, 83%, 58%)',   // Purple
+    'hsl(346, 77%, 50%)',   // Red
+    'hsl(48, 96%, 53%)',    // Yellow
+    'hsl(198, 93%, 60%)',   // Cyan
+    'hsl(31, 97%, 52%)',    // Orange
+    'hsl(328, 86%, 70%)',   // Pink
   ];
 
   useEffect(() => {
-    loadTasks();
+    loadData();
   }, []);
 
-  const loadTasks = async () => {
+  const loadData = async () => {
     try {
       const supabase = await getSupabase();
       if (!supabase) {
@@ -46,32 +54,40 @@ const CategoriesPage = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      // Load tasks
+      const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setTasks(data || []);
+      if (tasksError) throw tasksError;
+      setTasks(tasksData || []);
+
+      // Load categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
     } catch (error: any) {
-      console.error('Error loading tasks:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load tasks",
+        description: "Failed to load data",
         variant: "destructive",
       });
     }
   };
 
-  const categories = Array.from(new Set(tasks.map(t => t.category).filter(Boolean))) as string[];
-  
-  const categoryColors = categories.reduce((acc, cat, idx) => {
-    acc[cat] = categoryColorPalette[idx % categoryColorPalette.length];
+  const categoryColors = categories.reduce((acc, cat) => {
+    acc[cat.name] = cat.color;
     return acc;
   }, {} as { [key: string]: string });
 
-  const getCategoryTaskCount = (category: string) => {
-    return tasks.filter(t => t.category === category).length;
+  const getCategoryTaskCount = (categoryName: string) => {
+    return tasks.filter(t => t.category === categoryName).length;
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -87,7 +103,7 @@ const CategoriesPage = () => {
       return;
     }
 
-    if (categories.includes(trimmed)) {
+    if (categories.some(c => c.name === trimmed)) {
       toast({
         title: "Category exists",
         description: "This category already exists",
@@ -96,15 +112,40 @@ const CategoriesPage = () => {
       return;
     }
 
-    setNewCategory("");
-    toast({
-      title: "Category ready",
-      description: `You can now add tasks with the "${trimmed}" category`,
-    });
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
+      // Add category with a default color
+      const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
+      const { error } = await supabase
+        .from('categories')
+        .insert({ name: trimmed, color: defaultColor });
+
+      if (error) throw error;
+
+      await loadData();
+      setNewCategory("");
+      
+      toast({
+        title: "Category added",
+        description: `"${trimmed}" is ready to use`,
+      });
+    } catch (error: any) {
+      console.error('Error adding category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add category",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteCategory = async (category: string) => {
-    setDeleting(category);
+  const handleDeleteCategory = async (categoryName: string) => {
+    setDeleting(categoryName);
     try {
       const supabase = await getSupabase();
       if (!supabase) {
@@ -113,18 +154,26 @@ const CategoriesPage = () => {
       }
 
       // Update all tasks with this category to have no category
-      const { error } = await supabase
+      const { error: tasksError } = await supabase
         .from('tasks')
         .update({ category: null })
-        .eq('category', category);
+        .eq('category', categoryName);
 
-      if (error) throw error;
+      if (tasksError) throw tasksError;
 
-      await loadTasks();
+      // Delete the category
+      const { error: catError } = await supabase
+        .from('categories')
+        .delete()
+        .eq('name', categoryName);
+
+      if (catError) throw catError;
+
+      await loadData();
       
       toast({
         title: "Category deleted",
-        description: `All tasks from "${category}" are now uncategorized`,
+        description: `All tasks from "${categoryName}" are now uncategorized`,
       });
     } catch (error: any) {
       console.error('Error deleting category:', error);
@@ -138,9 +187,9 @@ const CategoriesPage = () => {
     }
   };
 
-  const handleStartEdit = (category: string) => {
-    setEditing(category);
-    setEditValue(category);
+  const handleStartEdit = (categoryName: string) => {
+    setEditing(categoryName);
+    setEditValue(categoryName);
   };
 
   const handleCancelEdit = () => {
@@ -148,7 +197,7 @@ const CategoriesPage = () => {
     setEditValue("");
   };
 
-  const handleSaveEdit = async (oldCategory: string) => {
+  const handleSaveEdit = async (oldCategoryName: string) => {
     const trimmed = editValue.trim();
     
     if (!trimmed) {
@@ -160,12 +209,12 @@ const CategoriesPage = () => {
       return;
     }
 
-    if (trimmed === oldCategory) {
+    if (trimmed === oldCategoryName) {
       handleCancelEdit();
       return;
     }
 
-    if (categories.includes(trimmed)) {
+    if (categories.some(c => c.name === trimmed)) {
       toast({
         title: "Category exists",
         description: "This category name already exists",
@@ -181,26 +230,66 @@ const CategoriesPage = () => {
         return;
       }
 
+      // Update category name
+      const { error: catError } = await supabase
+        .from('categories')
+        .update({ name: trimmed })
+        .eq('name', oldCategoryName);
+
+      if (catError) throw catError;
+
       // Update all tasks with this category to the new name
-      const { error } = await supabase
+      const { error: tasksError } = await supabase
         .from('tasks')
         .update({ category: trimmed })
-        .eq('category', oldCategory);
+        .eq('category', oldCategoryName);
 
-      if (error) throw error;
+      if (tasksError) throw tasksError;
 
-      await loadTasks();
+      await loadData();
       handleCancelEdit();
       
       toast({
         title: "Category renamed",
-        description: `"${oldCategory}" is now "${trimmed}"`,
+        description: `"${oldCategoryName}" is now "${trimmed}"`,
       });
     } catch (error: any) {
       console.error('Error renaming category:', error);
       toast({
         title: "Error",
         description: "Failed to rename category",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleChangeColor = async (categoryName: string, newColor: string) => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('categories')
+        .update({ color: newColor })
+        .eq('name', categoryName);
+
+      if (error) throw error;
+
+      await loadData();
+      setEditingColor(null);
+      
+      toast({
+        title: "Color updated",
+        description: `Color changed for "${categoryName}"`,
+      });
+    } catch (error: any) {
+      console.error('Error changing color:', error);
+      toast({
+        title: "Error",
+        description: "Failed to change color",
         variant: "destructive",
       });
     }
@@ -254,13 +343,14 @@ const CategoriesPage = () => {
           ) : (
             <div className="grid gap-3">
               {categories.map((category) => {
-                const categoryColor = categoryColors[category];
-                const taskCount = getCategoryTaskCount(category);
-                const isEditing = editing === category;
+                const categoryColor = category.color;
+                const taskCount = getCategoryTaskCount(category.name);
+                const isEditing = editing === category.name;
+                const isEditingColor = editingColor === category.name;
                 
                 return (
                   <div
-                    key={category}
+                    key={category.id}
                     className="flex items-center justify-between p-4 rounded-lg border-2 transition-all"
                     style={{
                       borderColor: categoryColor,
@@ -269,10 +359,26 @@ const CategoriesPage = () => {
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 cursor-pointer relative group"
                         style={{ backgroundColor: categoryColor }}
+                        onClick={() => setEditingColor(isEditingColor ? null : category.name)}
                       >
                         {taskCount}
+                        {isEditingColor && (
+                          <div className="absolute top-14 left-0 bg-card border-2 border-border rounded-lg p-2 shadow-xl z-50 grid grid-cols-4 gap-2">
+                            {categoryColorPalette.map((color, idx) => (
+                              <div
+                                key={idx}
+                                className="w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition-transform border-2 border-white"
+                                style={{ backgroundColor: color }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleChangeColor(category.name, color);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {isEditing ? (
                         <div className="flex-1 flex items-center gap-2">
@@ -280,7 +386,7 @@ const CategoriesPage = () => {
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(category);
+                              if (e.key === 'Enter') handleSaveEdit(category.name);
                               if (e.key === 'Escape') handleCancelEdit();
                             }}
                             className="flex-1 bg-background"
@@ -289,7 +395,7 @@ const CategoriesPage = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSaveEdit(category)}
+                            onClick={() => handleSaveEdit(category.name)}
                             className="gap-1 hover:bg-primary/10"
                           >
                             <Check className="w-4 h-4" />
@@ -305,9 +411,9 @@ const CategoriesPage = () => {
                         </div>
                       ) : (
                         <div className="flex-1">
-                          <div className="font-bold text-lg">{category}</div>
+                          <div className="font-bold text-lg">{category.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                            {taskCount} {taskCount === 1 ? 'task' : 'tasks'} • Click circle to change color
                           </div>
                         </div>
                       )}
@@ -318,7 +424,7 @@ const CategoriesPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleStartEdit(category)}
+                          onClick={() => handleStartEdit(category.name)}
                           className="gap-2 hover:bg-primary/10"
                         >
                           <Pencil className="w-4 h-4" />
@@ -327,11 +433,11 @@ const CategoriesPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteCategory(category)}
-                          disabled={deleting === category}
+                          onClick={() => handleDeleteCategory(category.name)}
+                          disabled={deleting === category.name}
                           className="gap-2 hover:bg-destructive/10 hover:text-destructive"
                         >
-                          {deleting === category ? (
+                          {deleting === category.name ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             <>

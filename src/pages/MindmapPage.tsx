@@ -42,6 +42,7 @@ const MindmapPage = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const nodeTypes: NodeTypes = useMemo(() => ({
@@ -88,6 +89,14 @@ const MindmapPage = () => {
 
       if (tasksError) throw tasksError;
       setTasks(tasksData || []);
+
+      // Load categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
 
       // Load relationships
       const { data: relationshipsData, error: relError } = await supabase
@@ -138,13 +147,13 @@ const MindmapPage = () => {
     }
 
     // Group tasks by category
-    const categories = new Map<string, Task[]>();
+    const categoriesMap = new Map<string, Task[]>();
     tasksData.forEach(task => {
       const cat = task.category || 'Uncategorized';
-      if (!categories.has(cat)) {
-        categories.set(cat, []);
+      if (!categoriesMap.has(cat)) {
+        categoriesMap.set(cat, []);
       }
-      categories.get(cat)?.push(task);
+      categoriesMap.get(cat)?.push(task);
     });
 
     const newNodes: Node[] = [];
@@ -164,29 +173,23 @@ const MindmapPage = () => {
     });
 
     // Level 2: Categories arranged horizontally below central node
-    const categoryArray = Array.from(categories.keys());
+    const categoryArray = Array.from(categoriesMap.keys());
     const level2Y = 200;
     const categorySpacing = 250;
     const totalCategoryWidth = (categoryArray.length - 1) * categorySpacing;
     const categoryStartX = centerX - totalCategoryWidth / 2;
 
-    // Define color palette for categories
-    const categoryColors = [
-      'hsl(var(--primary))',
-      'hsl(var(--secondary))',
-      'hsl(var(--accent))',
-      'hsl(280, 80%, 60%)', // Purple
-      'hsl(200, 80%, 60%)', // Blue
-      'hsl(160, 80%, 50%)', // Teal
-      'hsl(30, 90%, 60%)',  // Orange
-      'hsl(340, 80%, 60%)', // Pink
-    ];
+    // Get colors from database categories
+    const categoryColorsMap: { [key: string]: string } = {};
+    categories.forEach((cat: any) => {
+      categoryColorsMap[cat.name] = cat.color;
+    });
 
-    categoryArray.forEach((category, idx) => {
-      const categoryX = categoryStartX + idx * categorySpacing;
-      const categoryTasks = categories.get(category) || [];
+    categoryArray.forEach((category) => {
+      const categoryX = categoryStartX + categoryArray.indexOf(category) * categorySpacing;
+      const categoryTasks = categoriesMap.get(category) || [];
       const isExpanded = expandedCategories.has(category);
-      const categoryColor = categoryColors[idx % categoryColors.length];
+      const categoryColor = categoryColorsMap[category] || 'hsl(var(--primary))';
 
       // Create category node
       newNodes.push({

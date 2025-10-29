@@ -21,30 +21,16 @@ interface Task {
 const Index = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
-  // Define color palette for categories (matching MindmapPage)
-  const categoryColorPalette = [
-    'hsl(var(--primary))',
-    'hsl(var(--secondary))',
-    'hsl(var(--accent))',
-    'hsl(280, 80%, 60%)', // Purple
-    'hsl(200, 80%, 60%)', // Blue
-    'hsl(160, 80%, 50%)', // Teal
-    'hsl(30, 90%, 60%)',  // Orange
-    'hsl(340, 80%, 60%)', // Pink
-  ];
-
-  // Create category to color mapping
-  const categoryColors = tasks.reduce((acc, task) => {
-    if (task.category && !acc[task.category]) {
-      const uniqueCategories = Object.keys(acc);
-      acc[task.category] = categoryColorPalette[uniqueCategories.length % categoryColorPalette.length];
-    }
+  // Create category to color mapping from database
+  const categoryColors = categories.reduce((acc, cat) => {
+    acc[cat.name] = cat.color;
     return acc;
   }, {} as { [key: string]: string });
 
@@ -64,15 +50,24 @@ const Index = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      // Load tasks
+      const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (tasksError) throw tasksError;
 
-      setTasks(data || []);
-      setLevel(1 + (data?.filter(t => t.completed).length || 0));
+      setTasks(tasksData || []);
+      setLevel(1 + (tasksData?.filter(t => t.completed).length || 0));
+
+      // Load categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
     } catch (error: any) {
       console.error('Error loading tasks:', error);
       toast({
