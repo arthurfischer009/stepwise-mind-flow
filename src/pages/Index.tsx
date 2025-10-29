@@ -16,6 +16,7 @@ interface Task {
   completed: boolean;
   completed_at?: string;
   created_at?: string;
+  sort_order?: number;
 }
 
 const Index = () => {
@@ -66,6 +67,7 @@ const Index = () => {
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (tasksError) throw tasksError;
@@ -104,9 +106,11 @@ const Index = () => {
         return;
       }
 
+      const maxSortOrder = Math.max(...tasks.map(t => t.sort_order || 0), 0);
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert({ title, category, completed: false })
+        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1 })
         .select()
         .single();
 
@@ -189,6 +193,35 @@ const Index = () => {
     }
   };
 
+  const handleReorderTasks = async (reorderedTasks: Task[]) => {
+    try {
+      setTasks(reorderedTasks);
+
+      const supabase = await getSupabase();
+      if (!supabase) return;
+
+      // Update sort_order for all reordered tasks
+      const updates = reorderedTasks.map((task, index) => ({
+        id: task.id,
+        sort_order: index
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('tasks')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id);
+      }
+    } catch (error: any) {
+      console.error('Error reordering tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder tasks",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -251,6 +284,7 @@ const Index = () => {
               tasks={tasks}
               onAddTask={handleAddTask}
               onDeleteTask={handleDeleteTask}
+              onReorderTasks={handleReorderTasks}
               categoryColors={categoryColors}
             />
           </div>

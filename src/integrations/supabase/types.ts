@@ -87,6 +87,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           id: string
+          sort_order: number | null
           title: string
           updated_at: string | null
         }
@@ -96,6 +97,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          sort_order?: number | null
           title: string
           updated_at?: string | null
         }
@@ -105,6 +107,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          sort_order?: number | null
           title?: string
           updated_at?: string | null
         }

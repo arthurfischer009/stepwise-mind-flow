@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Task {
@@ -11,13 +12,37 @@ interface Task {
 interface TaskListProps {
   tasks: Task[];
   onDeleteTask: (id: string) => void;
+  onReorderTasks: (tasks: Task[]) => void;
   categoryColors: { [key: string]: string };
 }
 
-export const TaskList = ({ tasks, onDeleteTask, categoryColors }: TaskListProps) => {
+export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }: TaskListProps) => {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const pendingTasks = tasks.filter((t) => !t.completed);
 
   if (pendingTasks.length === 0) return null;
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newTasks = [...pendingTasks];
+    const draggedTask = newTasks[draggedIndex];
+    newTasks.splice(draggedIndex, 1);
+    newTasks.splice(index, 0, draggedTask);
+    
+    const completedTasks = tasks.filter((t) => t.completed);
+    onReorderTasks([...newTasks, ...completedTasks]);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
 
   return (
     <div className="space-y-1.5">
@@ -31,13 +56,19 @@ export const TaskList = ({ tasks, onDeleteTask, categoryColors }: TaskListProps)
           return (
             <div
               key={task.id}
-              className="group flex items-center gap-2 p-2 rounded bg-card border transition-all"
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              className="group flex items-center gap-2 p-2 rounded bg-card border transition-all cursor-move"
               style={{
                 borderColor: categoryColor || 'hsl(var(--border))',
-                backgroundColor: categoryColor ? `${categoryColor}10` : undefined
+                backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
+                opacity: draggedIndex === index ? 0.5 : 1
               }}
             >
-              <div 
+              <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <div
                 className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
                 style={{
                   backgroundColor: categoryColor || 'hsl(var(--muted))'
