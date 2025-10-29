@@ -6,8 +6,10 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network, BarChart3 } from "lucide-react";
+import { Network, BarChart3, LogOut } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 interface Task {
   id: string;
@@ -22,16 +24,45 @@ interface Task {
 
 const Index = () => {
   const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [level, setLevel] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>(() => {
     const saved = localStorage.getItem('aiSuggestions');
     return saved ? JSON.parse(saved) : [];
   });
   const { toast } = useToast();
+
+  // Check authentication
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (!session) {
+          navigate('/auth');
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (!session) {
+        navigate('/auth');
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Save suggestions to localStorage whenever they change
   useEffect(() => {
@@ -50,8 +81,10 @@ const Index = () => {
 
   // Load tasks from database
   useEffect(() => {
-    loadTasks();
-  }, []);
+    if (user) {
+      loadTasks();
+    }
+  }, [user]);
 
   const loadTasks = async () => {
     try {
@@ -114,7 +147,7 @@ const Index = () => {
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1 })
+        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user?.id })
         .select()
         .single();
 
@@ -298,6 +331,18 @@ const Index = () => {
             >
               <BarChart3 className="w-4 h-4" />
               Analytics
+            </Button>
+            <Button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate('/auth');
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">One task. One level. Total focus.</p>

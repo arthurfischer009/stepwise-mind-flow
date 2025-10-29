@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import MindmapPage from "./pages/MindmapPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/mindmap" element={<MindmapPage />} />
           <Route path="/categories" element={<CategoriesPage />} />

@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Plus, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { User, Session } from "@supabase/supabase-js";
 
 interface Task {
   id: string;
@@ -22,14 +24,43 @@ interface Category {
 const CategoriesPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editingColor, setEditingColor] = useState<string | null>(null);
+
+  // Check authentication
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (!session) {
+          navigate('/auth');
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (!session) {
+        navigate('/auth');
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const categoryColorPalette = [
     'hsl(221, 83%, 53%)',   // Blue
@@ -43,8 +74,10 @@ const CategoriesPage = () => {
   ];
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
     try {
@@ -123,7 +156,7 @@ const CategoriesPage = () => {
       const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
       const { error } = await supabase
         .from('categories')
-        .insert({ name: trimmed, color: defaultColor });
+        .insert({ name: trimmed, color: defaultColor, user_id: user?.id });
 
       if (error) throw error;
 
