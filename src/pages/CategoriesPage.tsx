@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +20,8 @@ const CategoriesPage = () => {
   const [newCategory, setNewCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const categoryColorPalette = [
     'hsl(var(--primary))',
@@ -136,6 +138,74 @@ const CategoriesPage = () => {
     }
   };
 
+  const handleStartEdit = (category: string) => {
+    setEditing(category);
+    setEditValue(category);
+  };
+
+  const handleCancelEdit = () => {
+    setEditing(null);
+    setEditValue("");
+  };
+
+  const handleSaveEdit = async (oldCategory: string) => {
+    const trimmed = editValue.trim();
+    
+    if (!trimmed) {
+      toast({
+        title: "Invalid name",
+        description: "Category name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (trimmed === oldCategory) {
+      handleCancelEdit();
+      return;
+    }
+
+    if (categories.includes(trimmed)) {
+      toast({
+        title: "Category exists",
+        description: "This category name already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
+      // Update all tasks with this category to the new name
+      const { error } = await supabase
+        .from('tasks')
+        .update({ category: trimmed })
+        .eq('category', oldCategory);
+
+      if (error) throw error;
+
+      await loadTasks();
+      handleCancelEdit();
+      
+      toast({
+        title: "Category renamed",
+        description: `"${oldCategory}" is now "${trimmed}"`,
+      });
+    } catch (error: any) {
+      console.error('Error renaming category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to rename category",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-6">
@@ -186,6 +256,7 @@ const CategoriesPage = () => {
               {categories.map((category) => {
                 const categoryColor = categoryColors[category];
                 const taskCount = getCategoryTaskCount(category);
+                const isEditing = editing === category;
                 
                 return (
                   <div
@@ -196,37 +267,81 @@ const CategoriesPage = () => {
                       background: `linear-gradient(135deg, ${categoryColor}15, ${categoryColor}05)`
                     }}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
                         style={{ backgroundColor: categoryColor }}
                       >
                         {taskCount}
                       </div>
-                      <div>
-                        <div className="font-bold text-lg">{category}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                      {isEditing ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(category);
+                              if (e.key === 'Escape') handleCancelEdit();
+                            }}
+                            className="flex-1 bg-background"
+                            autoFocus
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSaveEdit(category)}
+                            className="gap-1 hover:bg-primary/10"
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            className="gap-1 hover:bg-destructive/10"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex-1">
+                          <div className="font-bold text-lg">{category}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteCategory(category)}
-                      disabled={deleting === category}
-                      className="gap-2 hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      {deleting === category ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </>
-                      )}
-                    </Button>
+                    {!isEditing && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStartEdit(category)}
+                          className="gap-2 hover:bg-primary/10"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category)}
+                          disabled={deleting === category}
+                          className="gap-2 hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          {deleting === category ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
