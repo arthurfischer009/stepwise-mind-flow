@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { format, addMinutes } from "date-fns";
 
 interface Task {
   id: string;
@@ -21,6 +22,15 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }
   const pendingTasks = tasks.filter((t) => !t.completed);
 
   if (pendingTasks.length === 0) return null;
+
+  // Calculate start time for each task
+  // First task starts in 75 minutes (after current task completes)
+  // Each subsequent task starts 75 minutes after the previous one (45 min work + 30 min break)
+  const getTaskStartTime = (index: number): Date => {
+    const now = new Date();
+    const minutesUntilStart = 75 * (index + 1); // +1 because first upcoming task is after current
+    return addMinutes(now, minutesUntilStart);
+  };
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -52,6 +62,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }
       <div className="space-y-1.5">
         {pendingTasks.map((task, index) => {
           const categoryColor = task.category ? categoryColors[task.category] : undefined;
+          const startTime = getTaskStartTime(index);
           
           return (
             <div
@@ -68,7 +79,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }
               }}
             >
               <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <div
+              <div 
                 className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
                 style={{
                   backgroundColor: categoryColor || 'hsl(var(--muted))'
@@ -78,14 +89,20 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
-                {task.category && categoryColor && (
-                  <div 
-                    className="inline-block text-[10px] text-white font-semibold px-2 py-0.5 rounded-full mt-0.5"
-                    style={{ backgroundColor: categoryColor }}
-                  >
-                    {task.category}
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    <span>{format(startTime, 'HH:mm')}</span>
                   </div>
-                )}
+                  {task.category && categoryColor && (
+                    <div 
+                      className="inline-block text-[10px] text-white font-semibold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: categoryColor }}
+                    >
+                      {task.category}
+                    </div>
+                  )}
+                </div>
               </div>
               <Button
                 variant="ghost"

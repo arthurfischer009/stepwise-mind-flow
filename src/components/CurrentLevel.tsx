@@ -1,5 +1,6 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { format, addMinutes } from "date-fns";
 
 interface Task {
   id: string;
@@ -15,6 +16,9 @@ interface CurrentLevelProps {
 }
 
 export const CurrentLevel = ({ task, onComplete, level, categoryColor }: CurrentLevelProps) => {
+  const now = new Date();
+  const endTime = addMinutes(now, 45);
+  
   if (!task) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
@@ -34,6 +38,11 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor }: Current
       <div className="space-y-1">
         <div className="text-xs font-medium text-primary uppercase tracking-wider">
           Level {level}
+        </div>
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Clock className="w-3 h-3" />
+          <span>{format(now, 'HH:mm')} - {format(endTime, 'HH:mm')}</span>
+          <span className="text-[10px]">(45 min)</span>
         </div>
         {task.category && categoryColor && (
           <div 
