@@ -23,6 +23,7 @@ const Index = () => {
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const [mindmapHierarchy, setMindmapHierarchy] = useState<any>(null);
   const [mindmapInsights, setMindmapInsights] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Load tasks from database
@@ -207,6 +208,8 @@ const Index = () => {
                   tasks={tasks}
                   onAddTask={handleAddTask}
                   onDeleteTask={handleDeleteTask}
+                  suggestions={suggestions}
+                  onSuggestionsChange={setSuggestions}
                 />
               </TabsContent>
               

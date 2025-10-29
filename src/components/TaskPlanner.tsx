@@ -17,6 +17,8 @@ interface TaskPlannerProps {
   tasks: Task[];
   onAddTask: (title: string, category?: string) => void;
   onDeleteTask: (id: string) => void;
+  suggestions: Suggestion[];
+  onSuggestionsChange: (suggestions: Suggestion[]) => void;
 }
 
 interface Suggestion {
@@ -25,10 +27,9 @@ interface Suggestion {
   reasoning: string;
 }
 
-export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps) => {
+export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, suggestions, onSuggestionsChange }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -62,7 +63,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
 
       if (error) throw error;
 
-      setSuggestions(data.suggestions || []);
+      onSuggestionsChange(data.suggestions || []);
       
       if (data.suggestions?.length > 0) {
         toast({
@@ -84,7 +85,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
 
   const applySuggestion = (suggestion: Suggestion) => {
     onAddTask(suggestion.title, suggestion.category);
-    setSuggestions(prev => prev.filter(s => s.title !== suggestion.title));
+    onSuggestionsChange(suggestions.filter(s => s.title !== suggestion.title));
     toast({
       title: "Task hinzugefügt",
       description: suggestion.title,
