@@ -48,6 +48,9 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
     }
 
     setLoading(true);
+    setHierarchy(null); // Clear old data
+    setInsights(null);
+    
     try {
       const supabase = await getSupabase();
       if (!supabase) {
@@ -62,6 +65,8 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
 
       if (error) throw error;
 
+      console.log('Mindmap response:', data);
+
       // Store relationships in database
       if (data.relationships?.length > 0) {
         const { error: insertError } = await supabase
@@ -71,18 +76,26 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
         if (insertError) console.error('Error storing relationships:', insertError);
       }
 
-      setHierarchy(data.hierarchy);
-      setInsights(data.insights);
-      
-      toast({
-        title: "Network Generated!",
-        description: `Created ${data.hierarchy?.themes?.length || 0} theme hierarchies`,
-      });
+      if (data.hierarchy?.themes?.length > 0) {
+        setHierarchy(data.hierarchy);
+        setInsights(data.insights);
+        
+        toast({
+          title: "Network Generated!",
+          description: `Created ${data.hierarchy.themes.length} themes`,
+        });
+      } else {
+        toast({
+          title: "No Structure Found",
+          description: "Try adding more tasks with different categories",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       console.error('Error generating mindmap:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to generate mindmap",
+        title: "Generation Failed",
+        description: error.message || "Network error - try again",
         variant: "destructive",
       });
     } finally {
@@ -118,10 +131,17 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
         </Button>
       </div>
 
-      {hierarchy && (
+      {loading && (
+        <div className="flex items-center justify-center p-8 text-muted-foreground">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <span>Analyzing your tasks...</span>
+        </div>
+      )}
+
+      {!loading && hierarchy && hierarchy.themes.length > 0 && (
         <div className="space-y-3">
           {hierarchy.themes.map((theme) => (
-            <Collapsible key={theme.id} className="rounded-lg border border-primary/30 bg-primary/5">
+            <Collapsible key={theme.id} defaultOpen className="rounded-lg border border-primary/30 bg-primary/5">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-primary/10 transition-colors">
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 text-primary" />

@@ -19,26 +19,15 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const systemPrompt = `You are an AI that creates hierarchical knowledge structures from tasks.
-    
-    Your job:
-    1. IDENTIFY core themes/domains from tasks (3-4 main themes max)
-    2. GROUP tasks under these themes hierarchically (Level 0: theme → Level 1: subtheme → Level 2: task groups → Level 3: individual tasks)
-    3. CREATE connections showing how tasks relate within and across themes
-    4. DETECT workflow patterns and dependencies
-    
-    Create a clear 3-4 level hierarchy where themes naturally emerge from the data.`;
+    const systemPrompt = `You are a task organization AI. Create a simple 2-level hierarchy:
+    Level 1: Main themes (3-5 themes based on task categories)
+    Level 2: Sub-themes with grouped tasks
+    Keep it simple and fast.`;
 
-    const userPrompt = `Analyze and organize these tasks into a hierarchical structure:
-    ${JSON.stringify(tasks, null, 2)}
+    const userPrompt = `Group these ${tasks.length} tasks into themes:
+    ${JSON.stringify(tasks.map((t: any) => ({ id: t.id, title: t.title, category: t.category })))}
     
-    Build a 3-4 level hierarchy:
-    - Level 0: Main themes/domains (3-4 max)
-    - Level 1: Sub-themes or project areas  
-    - Level 2: Task clusters
-    - Level 3: Individual tasks
-    
-    Show connections between related items across and within levels.`;
+    Create 3-5 main themes, each with 2-4 sub-themes containing relevant task IDs.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
