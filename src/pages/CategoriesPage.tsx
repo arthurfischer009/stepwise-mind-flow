@@ -152,8 +152,12 @@ const CategoriesPage = () => {
         return;
       }
 
-      // Pick a default color deterministically
-      const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
+      // Pick a default color deterministically - prefer unused colors
+      const usedColors = new Set(categories.map(c => c.color));
+      const unusedColors = categoryColorPalette.filter(c => !usedColors.has(c));
+      const defaultColor = unusedColors.length > 0 
+        ? unusedColors[0] 
+        : categoryColorPalette[categories.length % categoryColorPalette.length];
 
       // Optimistic UI: add immediately
       const tempCategory = { id: `temp-${Date.now()}`, name: trimmed, color: defaultColor } as Category;
