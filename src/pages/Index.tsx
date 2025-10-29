@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CurrentLevel } from "@/components/CurrentLevel";
 import { TaskPlanner } from "@/components/TaskPlanner";
 import { ProgressStats } from "@/components/ProgressStats";
+import { AISuggestions } from "@/components/AISuggestions";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network } from "lucide-react";
@@ -235,12 +236,18 @@ const Index = () => {
               tasks={tasks}
               onAddTask={handleAddTask}
               onDeleteTask={handleDeleteTask}
-              suggestions={suggestions}
-              onSuggestionsChange={setSuggestions}
               categoryColors={categoryColors}
             />
           </div>
         </div>
+
+        <AISuggestions
+          tasks={tasks}
+          suggestions={suggestions}
+          onSuggestionsChange={setSuggestions}
+          onAddTask={handleAddTask}
+          categoryColors={categoryColors}
+        />
       </div>
     </div>
   );
