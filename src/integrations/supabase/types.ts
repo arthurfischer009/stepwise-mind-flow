@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      task_relationships: {
+        Row: {
+          created_at: string | null
+          from_task_id: string | null
+          id: string
+          relationship_type: string
+          strength: number | null
+          to_task_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_task_id?: string | null
+          id?: string
+          relationship_type: string
+          strength?: number | null
+          to_task_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_task_id?: string | null
+          id?: string
+          relationship_type?: string
+          strength?: number | null
+          to_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_relationships_from_task_id_fkey"
+            columns: ["from_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_relationships_to_task_id_fkey"
+            columns: ["to_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          category: string | null
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
