@@ -149,9 +149,40 @@ serve(async (req) => {
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    const suggestions = toolCall ? JSON.parse(toolCall.function.arguments).suggestions : [];
+    const rawSuggestions = toolCall ? JSON.parse(toolCall.function.arguments).suggestions : [];
 
-    return new Response(JSON.stringify({ suggestions }), {
+    // Strict post-filtering: only suggest tasks the user already had before
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    const pastTitles = new Set((completedTasks || []).map((t: any) => normalize(t.title)));
+
+    let filtered = (rawSuggestions || []).filter((s: any) => pastTitles.has(normalize(s.title)));
+
+    // If a specificCategory was requested, enforce it
+    if (specificCategory) {
+      filtered = filtered.filter((s: any) => (s.category || specificCategory) === specificCategory);
+    }
+
+    // Fallback: if nothing left, resurface previous completed tasks (no new ideas)
+    if (!filtered.length) {
+      const seen = new Set<string>();
+      const base = (completedTasks || []).filter((t: any) => specificCategory ? t.category === specificCategory : true);
+      const fallback = [] as any[];
+      for (let i = base.length - 1; i >= 0 && fallback.length < 5; i--) {
+        const title = base[i].title;
+        const key = normalize(title);
+        if (title && !seen.has(key)) {
+          seen.add(key);
+          fallback.push({
+            title,
+            category: base[i].category || (specificCategory || 'Other'),
+            reasoning: 'Aus bereits erledigten Aufgaben erneut vorgeschlagen'
+          });
+        }
+      }
+      filtered = fallback;
+    }
+
+    return new Response(JSON.stringify({ suggestions: filtered }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
