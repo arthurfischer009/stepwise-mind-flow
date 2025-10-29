@@ -155,27 +155,38 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
           </Button>
         </div>
 
-        {suggestions.length > 0 && (
-          <div className="space-y-2">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
-                onClick={() => applySuggestion(suggestion)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm mb-1">{suggestion.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {suggestion.category} • {suggestion.reasoning}
+      {suggestions.length > 0 && (
+        <div className="space-y-4">
+          {Object.entries(
+            suggestions.reduce((acc, suggestion) => {
+              const cat = suggestion.category || 'Other';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(suggestion);
+              return acc;
+            }, {} as Record<string, Suggestion[]>)
+          ).map(([category, items]) => (
+            <div key={category} className="space-y-2">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {category}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {items.slice(0, 5).map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="p-2 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
+                    onClick={() => applySuggestion(suggestion)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium text-sm truncate">{suggestion.title}</div>
+                      <Plus className="w-3 h-3 flex-shrink-0 text-primary" />
                     </div>
                   </div>
-                  <Plus className="w-4 h-4 flex-shrink-0 text-primary" />
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+      )}
 
         {tasks.filter(t => t.completed).length === 0 && suggestions.length === 0 && (
           <div className="text-center text-xs text-muted-foreground p-3 border border-dashed rounded-lg">
