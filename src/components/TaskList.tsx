@@ -8,17 +8,20 @@ interface Task {
   title: string;
   category?: string;
   completed: boolean;
+  points?: number;
 }
 
 interface TaskListProps {
   tasks: Task[];
   onDeleteTask: (id: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
+  onUpdatePoints: (id: string, points: number) => void;
   categoryColors: { [key: string]: string };
 }
 
-export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }: TaskListProps) => {
+export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, categoryColors }: TaskListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [editingPoints, setEditingPoints] = useState<string | null>(null);
   const pendingTasks = tasks.filter((t) => !t.completed);
 
   if (pendingTasks.length === 0) return null;
@@ -104,14 +107,47 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, categoryColors }
                   )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDeleteTask(task.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive h-6 w-6 p-0"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {editingPoints === task.id ? (
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    defaultValue={task.points || 1}
+                    onBlur={(e) => {
+                      const points = parseInt(e.target.value) || 1;
+                      onUpdatePoints(task.id, points);
+                      setEditingPoints(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const points = parseInt(e.currentTarget.value) || 1;
+                        onUpdatePoints(task.id, points);
+                        setEditingPoints(null);
+                      }
+                    }}
+                    autoFocus
+                    className="w-12 h-6 px-1 text-xs text-center bg-background border rounded"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setEditingPoints(task.id)}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold rounded hover:bg-primary/10 transition-colors"
+                    style={{ color: categoryColor || 'hsl(var(--primary))' }}
+                  >
+                    <span>{task.points || 1}</span>
+                    <span className="text-[10px]">XP</span>
+                  </button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteTask(task.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive h-6 w-6 p-0"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </div>
           );
         })}

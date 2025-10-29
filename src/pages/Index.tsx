@@ -17,6 +17,7 @@ interface Task {
   completed_at?: string;
   created_at?: string;
   sort_order?: number;
+  points?: number;
 }
 
 const Index = () => {
@@ -96,6 +97,9 @@ const Index = () => {
 
   const currentTask = tasks.find((t) => !t.completed) || null;
   const completedToday = tasks.filter((t) => t.completed).length;
+  const totalPoints = tasks
+    .filter((t) => t.completed)
+    .reduce((sum, t) => sum + (t.points || 1), 0);
   const currentTaskColor = currentTask?.category ? categoryColors[currentTask.category] : undefined;
 
   const handleAddTask = async (title: string, category?: string) => {
@@ -110,7 +114,7 @@ const Index = () => {
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1 })
+        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1 })
         .select()
         .single();
 
@@ -222,6 +226,34 @@ const Index = () => {
     }
   };
 
+  const handleUpdatePoints = async (id: string, points: number) => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ points })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, points } : t))
+      );
+    } catch (error: any) {
+      console.error('Error updating points:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update points",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -268,6 +300,7 @@ const Index = () => {
               level={level}
               completedToday={completedToday}
               totalTasks={tasks.length}
+              totalPoints={totalPoints}
             />
             <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
@@ -285,6 +318,7 @@ const Index = () => {
               onAddTask={handleAddTask}
               onDeleteTask={handleDeleteTask}
               onReorderTasks={handleReorderTasks}
+              onUpdatePoints={handleUpdatePoints}
               categoryColors={categoryColors}
             />
           </div>

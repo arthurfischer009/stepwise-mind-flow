@@ -9,6 +9,7 @@ interface Task {
   title: string;
   category?: string;
   completed: boolean;
+  points?: number;
 }
 
 interface Suggestion {

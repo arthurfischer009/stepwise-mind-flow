@@ -9,6 +9,7 @@ interface Task {
   title: string;
   category?: string;
   completed: boolean;
+  points?: number;
 }
 
 interface TaskPlannerProps {
@@ -16,10 +17,11 @@ interface TaskPlannerProps {
   onAddTask: (title: string, category?: string) => void;
   onDeleteTask: (id: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
+  onUpdatePoints: (id: string, points: number) => void;
   categoryColors: { [key: string]: string };
 }
 
-export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, categoryColors }: TaskPlannerProps) => {
+export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, categoryColors }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
 
@@ -68,6 +70,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, ca
           tasks={tasks}
           onDeleteTask={onDeleteTask}
           onReorderTasks={onReorderTasks}
+          onUpdatePoints={onUpdatePoints}
           categoryColors={categoryColors}
         />
     </div>

@@ -6,6 +6,7 @@ interface Task {
   id: string;
   title: string;
   category?: string;
+  points?: number;
 }
 
 interface CurrentLevelProps {
@@ -83,7 +84,7 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor }: Current
       >
         <span className="relative z-10 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 transition-transform group-hover:scale-110" />
-          Complete Level
+          Complete Level {task.points && `+${task.points} XP`}
         </span>
       </Button>
     </div>

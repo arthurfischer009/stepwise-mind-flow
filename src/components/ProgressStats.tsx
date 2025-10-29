@@ -1,18 +1,25 @@
-import { Trophy, Target, Zap } from "lucide-react";
+import { Trophy, Target, Zap, Star } from "lucide-react";
 
 interface ProgressStatsProps {
   level: number;
   completedToday: number;
   totalTasks: number;
+  totalPoints: number;
 }
 
-export const ProgressStats = ({ level, completedToday, totalTasks }: ProgressStatsProps) => {
+export const ProgressStats = ({ level, completedToday, totalTasks, totalPoints }: ProgressStatsProps) => {
   const stats = [
     {
       icon: Trophy,
       label: "Level",
       value: level,
       color: "text-primary",
+    },
+    {
+      icon: Star,
+      label: "Total XP",
+      value: totalPoints,
+      color: "text-yellow-500",
     },
     {
       icon: Zap,
@@ -29,7 +36,7 @@ export const ProgressStats = ({ level, completedToday, totalTasks }: ProgressSta
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-4 gap-3">
       {stats.map((stat) => (
         <div
           key={stat.label}
