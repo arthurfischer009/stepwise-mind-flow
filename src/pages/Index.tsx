@@ -150,6 +150,11 @@ const Index = () => {
         return;
       }
 
+      if (!user) {
+        toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
+        return;
+      }
+
       // Auto-create category if it doesn't exist and category is provided
       if (category && !categories.find(c => c.name === category)) {
         const categoryColorPalette = [
@@ -167,7 +172,7 @@ const Index = () => {
         
         const { error: catError } = await supabase
           .from('categories')
-          .insert({ name: category, color: defaultColor, user_id: user?.id });
+          .insert({ name: category, color: defaultColor, user_id: user.id });
 
         if (!catError) {
           // Reload categories
@@ -178,11 +183,11 @@ const Index = () => {
         }
       }
 
-      const maxSortOrder = Math.max(...tasks.map(t => t.sort_order || 0), 0);
+      const maxSortOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order || 0)) : 0;
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user?.id })
+        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user.id })
         .select()
         .single();
 
