@@ -152,22 +152,31 @@ const CategoriesPage = () => {
         return;
       }
 
-      // Add category with a default color
+      // Pick a default color deterministically
       const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
+
+      // Optimistic UI: add immediately
+      const tempCategory = { id: `temp-${Date.now()}`, name: trimmed, color: defaultColor } as Category;
+      setCategories((prev) => [...prev, tempCategory]);
+      setNewCategory("");
+
+      // Persist
       const { data, error } = await supabase
         .from('categories')
         .insert({ name: trimmed, color: defaultColor, user_id: user?.id })
-        .select()
+        .select('id, name, color')
         .single();
 
       if (error) {
+        // Rollback optimistic add on error
+        setCategories((prev) => prev.filter((c) => c.id !== tempCategory.id));
         console.error('Category insert error:', error);
         throw error;
       }
 
-      setCategories(prev => [...prev, data]);
-      setNewCategory("");
-      
+      // Replace temp with real row
+      setCategories((prev) => prev.map((c) => (c.id === tempCategory.id ? { ...data } as Category : c)));
+
       toast({
         title: "Category added",
         description: `"${trimmed}" is ready to use`,
