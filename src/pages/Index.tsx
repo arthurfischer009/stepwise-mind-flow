@@ -20,7 +20,8 @@ interface Task {
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [level, setLevel] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   // Load tasks from database
