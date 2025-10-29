@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/lib/safeSupabase";
 
 interface Task {
   id: string;
@@ -35,6 +35,12 @@ export const AISuggestions = ({ tasks, onAddTask }: AISuggestionsProps) => {
         .map(t => ({ title: t.title, category: t.category }));
       
       const currentCategories = [...new Set(tasks.map(t => t.category).filter(Boolean))];
+
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke('ai-suggest-tasks', {
         body: { completedTasks, currentCategories }

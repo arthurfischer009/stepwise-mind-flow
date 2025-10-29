@@ -5,8 +5,8 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { MindmapView } from "@/components/MindmapView";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getSupabase } from "@/lib/safeSupabase";
 
 interface Task {
   id: string;
@@ -30,6 +30,15 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({
+          title: "Backend not ready",
+          description: "Refresh the page to finish Cloud setup.",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -56,6 +65,12 @@ const Index = () => {
 
   const handleAddTask = async (title: string, category?: string) => {
     try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .insert({ title, category, completed: false })
@@ -83,6 +98,12 @@ const Index = () => {
     if (!currentTask) return;
 
     try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
       const { error } = await supabase
         .from('tasks')
         .update({ completed: true, completed_at: new Date().toISOString() })
@@ -111,6 +132,12 @@ const Index = () => {
 
   const handleDeleteTask = async (id: string) => {
     try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
       const { error } = await supabase
         .from('tasks')
         .delete()

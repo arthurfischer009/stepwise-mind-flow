@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Network, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/lib/safeSupabase";
 
 interface Task {
   id: string;
@@ -31,6 +31,13 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
 
     setLoading(true);
     try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('ai-generate-mindmap', {
         body: { tasks }
       });
