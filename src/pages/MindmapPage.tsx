@@ -19,6 +19,7 @@ import { getSupabase } from "@/lib/safeSupabase";
 import { useToast } from "@/hooks/use-toast";
 import { CategoryNode, CategoryNodeData } from "@/components/CategoryNode";
 import { TaskNode, TaskNodeData } from "@/components/TaskNode";
+import { CentralNode, CentralNodeData } from "@/components/CentralNode";
 
 interface Task {
   id: string;
@@ -44,6 +45,7 @@ const MindmapPage = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const nodeTypes: NodeTypes = useMemo(() => ({
+    central: CentralNode,
     category: CategoryNode,
     task: TaskNode,
   }), []);
@@ -148,14 +150,28 @@ const MindmapPage = () => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    // Hierarchical layout - categories in a vertical column
+    // Central node
+    const centerX = 600;
+    const centerY = 400;
+    
+    newNodes.push({
+      id: 'central',
+      type: 'central',
+      position: { x: centerX, y: centerY },
+      data: { 
+        label: 'My Quest'
+      } as CentralNodeData,
+    });
+
+    // Radial layout - categories arranged in a circle around the center
     const categoryArray = Array.from(categories.keys());
-    const startY = 100;
-    const categorySpacing = 250;
-    const startX = 400;
+    const radius = 300; // Distance from center to categories
+    const angleStep = (2 * Math.PI) / categoryArray.length;
 
     categoryArray.forEach((category, idx) => {
-      const categoryY = startY + idx * categorySpacing;
+      const angle = idx * angleStep - Math.PI / 2; // Start from top
+      const categoryX = centerX + radius * Math.cos(angle);
+      const categoryY = centerY + radius * Math.sin(angle);
       const categoryTasks = categories.get(category) || [];
       const isExpanded = expandedCategories.has(category);
 
@@ -163,7 +179,7 @@ const MindmapPage = () => {
       newNodes.push({
         id: `cat-${category}`,
         type: 'category',
-        position: { x: startX, y: categoryY },
+        position: { x: categoryX, y: categoryY },
         data: { 
           label: category,
           taskCount: categoryTasks.length,
@@ -172,22 +188,29 @@ const MindmapPage = () => {
         } as CategoryNodeData,
       });
 
+      // Connect category to central node
+      newEdges.push({
+        id: `central-to-cat-${category}`,
+        source: 'central',
+        target: `cat-${category}`,
+        type: 'smoothstep',
+        style: { 
+          stroke: 'hsl(var(--primary))', 
+          strokeWidth: 2,
+          opacity: 0.6 
+        },
+        animated: false,
+      });
+
       // Only show task nodes if category is expanded
       if (isExpanded) {
-        const tasksPerRow = 4;
-        const taskSpacing = 200;
-        const rowSpacing = 80;
+        const taskRadius = 150; // Distance from category to tasks
+        const taskAngleStep = (2 * Math.PI) / Math.max(categoryTasks.length, 1);
 
         categoryTasks.forEach((task, taskIdx) => {
-          const row = Math.floor(taskIdx / tasksPerRow);
-          const col = taskIdx % tasksPerRow;
-          
-          // Center the tasks under the category
-          const totalTasksInRow = Math.min(tasksPerRow, categoryTasks.length - row * tasksPerRow);
-          const rowStartX = startX - (totalTasksInRow - 1) * taskSpacing / 2;
-          
-          const taskX = rowStartX + col * taskSpacing;
-          const taskY = categoryY + 80 + row * rowSpacing;
+          const taskAngle = taskIdx * taskAngleStep;
+          const taskX = categoryX + taskRadius * Math.cos(angle + taskAngle);
+          const taskY = categoryY + taskRadius * Math.sin(angle + taskAngle);
 
           newNodes.push({
             id: task.id,
