@@ -13,6 +13,10 @@ interface Task {
 
 interface MindmapViewProps {
   tasks: Task[];
+  hierarchy: Hierarchy | null;
+  insights: any;
+  onHierarchyChange: (hierarchy: Hierarchy | null) => void;
+  onInsightsChange: (insights: any) => void;
 }
 
 interface Hierarchy {
@@ -31,10 +35,8 @@ interface Hierarchy {
   }>;
 }
 
-export const MindmapView = ({ tasks }: MindmapViewProps) => {
+export const MindmapView = ({ tasks, hierarchy, insights, onHierarchyChange, onInsightsChange }: MindmapViewProps) => {
   const [loading, setLoading] = useState(false);
-  const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null);
-  const [insights, setInsights] = useState<any>(null);
   const { toast } = useToast();
 
   const generateMindmap = async () => {
@@ -75,8 +77,8 @@ export const MindmapView = ({ tasks }: MindmapViewProps) => {
       }
 
       if (data.hierarchy?.themes?.length > 0) {
-        setHierarchy(data.hierarchy);
-        setInsights(data.insights);
+        onHierarchyChange(data.hierarchy);
+        onInsightsChange(data.insights);
         
         toast({
           title: "Network Updated!",

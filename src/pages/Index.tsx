@@ -21,6 +21,8 @@ const Index = () => {
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
+  const [mindmapHierarchy, setMindmapHierarchy] = useState<any>(null);
+  const [mindmapInsights, setMindmapInsights] = useState<any>(null);
   const { toast } = useToast();
 
   // Load tasks from database
@@ -209,7 +211,13 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="mindmap" className="mt-0">
-                <MindmapView tasks={tasks} />
+                <MindmapView 
+                  tasks={tasks}
+                  hierarchy={mindmapHierarchy}
+                  insights={mindmapInsights}
+                  onHierarchyChange={setMindmapHierarchy}
+                  onInsightsChange={setMindmapInsights}
+                />
               </TabsContent>
             </Tabs>
           </div>
