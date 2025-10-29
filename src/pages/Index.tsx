@@ -175,7 +175,7 @@ const Index = () => {
           <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
             Focus Quest
           </h1>
-          <p className="text-muted-foreground">One task. One level. Complete focus.</p>
+          <p className="text-muted-foreground">One task. One level. Total focus.</p>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
