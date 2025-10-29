@@ -148,7 +148,8 @@ const AnalyticsPage = () => {
       name,
       rate: Math.round((data.completed / data.total) * 100),
       completed: data.completed,
-      pending: data.total - data.completed
+      pending: data.total - data.completed,
+      color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
     }));
   };
 
@@ -220,6 +221,7 @@ const AnalyticsPage = () => {
       category: cat.name,
       completion: cat.rate,
       tasks: Math.min(100, cat.completed * 10),
+      color: cat.color
     }));
   };
 
@@ -408,7 +410,11 @@ const AnalyticsPage = () => {
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
                 />
                 <Legend />
-                <Bar dataKey="completed" fill="hsl(var(--primary))" />
+                <Bar dataKey="completed">
+                  {getCompletionByCategory().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
                 <Bar dataKey="pending" fill="hsl(var(--muted))" />
               </BarChart>
             </ResponsiveContainer>
@@ -428,7 +434,11 @@ const AnalyticsPage = () => {
                 <Tooltip 
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
                 />
-                <Bar dataKey="points" fill="hsl(var(--accent))" />
+                <Bar dataKey="points">
+                  {getPointsByCategory().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
