@@ -33,10 +33,7 @@ const Index = () => {
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
-  const [suggestions, setSuggestions] = useState<any[]>(() => {
-    const saved = localStorage.getItem('aiSuggestions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Check authentication
