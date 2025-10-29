@@ -99,42 +99,42 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="h-1 flex-1 bg-gradient-to-r from-primary via-secondary to-accent rounded-full" />
-        <h2 className="text-2xl font-bold whitespace-nowrap">Today's Quest</h2>
-        <div className="h-1 flex-1 bg-gradient-to-r from-accent via-secondary to-primary rounded-full" />
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-0.5 flex-1 bg-gradient-to-r from-primary via-secondary to-accent rounded-full" />
+        <h2 className="text-lg font-bold whitespace-nowrap">Today's Quest</h2>
+        <div className="h-0.5 flex-1 bg-gradient-to-r from-accent via-secondary to-primary rounded-full" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex gap-2">
           <Input
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             placeholder="What's your next challenge?"
-            className="flex-1 bg-card border-border focus:border-primary transition-colors"
+            className="flex-1 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
           <Input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="Category"
-            className="w-32 bg-card border-border focus:border-primary transition-colors"
+            className="w-28 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
           <Button
             type="submit"
-            size="icon"
-            className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+            size="sm"
+            className="bg-primary hover:bg-primary/90 transition-all h-9 px-3"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
           </Button>
         </div>
       </form>
 
       {/* AI Suggestions Section */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Sparkles className="w-3.5 h-3.5" />
             <span>AI Suggestions</span>
           </div>
           <Button
@@ -142,16 +142,16 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
             disabled={loading || tasks.filter(t => t.completed).length === 0}
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-1.5 h-7 text-xs"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" />
                 Thinking...
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3 h-3" />
                 Get Ideas
               </>
             )}
@@ -159,7 +159,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
         </div>
 
       {suggestions.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {Object.entries(
             suggestions.reduce((acc, suggestion) => {
               const cat = suggestion.category || 'Other';
@@ -168,19 +168,19 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
               return acc;
             }, {} as Record<string, Suggestion[]>)
           ).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div key={category} className="space-y-1">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                 {category}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {items.slice(0, 5).map((suggestion, index) => (
+              <div className="grid grid-cols-2 gap-1.5">
+                {items.slice(0, 4).map((suggestion, index) => (
                   <div
                     key={index}
-                    className="p-2 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
+                    className="p-1.5 rounded bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
                     onClick={() => applySuggestion(suggestion)}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="font-medium text-sm truncate">{suggestion.title}</div>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="font-medium text-xs truncate leading-tight">{suggestion.title}</div>
                       <Plus className="w-3 h-3 flex-shrink-0 text-primary" />
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
       )}
 
         {tasks.filter(t => t.completed).length === 0 && suggestions.length === 0 && (
-          <div className="text-center text-xs text-muted-foreground p-3 border border-dashed rounded-lg">
+          <div className="text-center text-[10px] text-muted-foreground p-2 border border-dashed rounded">
             Complete tasks to unlock AI suggestions
           </div>
         )}
@@ -200,17 +200,17 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
 
       {/* Quick Start Suggestions */}
       {tasks.length === 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4" />
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Quick start ideas:</span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {quickSuggestions.map((suggestion) => (
               <button
                 key={suggestion}
                 onClick={() => setNewTask(suggestion)}
-                className="text-left p-3 rounded-lg bg-card border border-border hover:border-primary transition-all hover:scale-105 text-sm"
+                className="text-left p-2 rounded bg-card border border-border hover:border-primary transition-all text-xs"
               >
                 {suggestion}
               </button>
