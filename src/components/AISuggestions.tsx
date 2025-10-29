@@ -86,27 +86,27 @@ export const AISuggestions = ({
   };
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-2xl bg-card border border-border p-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-bold">AI Suggestions</h2>
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h2 className="text-base font-bold">AI Suggestions</h2>
         </div>
         <Button
           onClick={generateSuggestions}
           disabled={loading || tasks.filter(t => t.completed).length === 0}
           variant="outline"
           size="sm"
-          className="gap-2"
+          className="gap-1.5 h-7 text-xs"
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3 h-3 animate-spin" />
               Thinking...
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-3 h-3" />
               Get Ideas
             </>
           )}
@@ -114,7 +114,7 @@ export const AISuggestions = ({
       </div>
 
       {suggestions.length > 0 ? (
-        <div className="flex gap-4 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {Object.entries(
             suggestions.reduce((acc, suggestion) => {
               const cat = suggestion.category || 'Other';
@@ -126,26 +126,26 @@ export const AISuggestions = ({
             const categoryColor = categoryColors[category] || 'hsl(var(--primary))';
             
             return (
-              <div key={category} className="flex-shrink-0 space-y-2">
+              <div key={category} className="flex-shrink-0 space-y-1.5">
                 <div 
-                  className="text-xs font-bold text-white px-3 py-1 rounded-full inline-block"
+                  className="text-[10px] font-bold text-white px-2 py-0.5 rounded-full inline-block"
                   style={{ backgroundColor: categoryColor }}
                 >
                   {category}
                 </div>
-                <div className="space-y-1.5">
-                  {items.map((suggestion, index) => (
+                <div className="space-y-1">
+                  {items.slice(0, 6).map((suggestion, index) => (
                     <div
                       key={index}
-                      className="w-48 p-2 rounded-md border transition-all cursor-pointer hover:shadow-md"
+                      className="w-40 p-1.5 rounded-md border transition-all cursor-pointer hover:shadow-md"
                       style={{
                         borderColor: categoryColor,
                         background: `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}05)`
                       }}
                       onClick={() => applySuggestion(suggestion)}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-medium leading-tight flex-1">{suggestion.title}</div>
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="text-[11px] font-medium leading-tight flex-1">{suggestion.title}</div>
                         <Plus className="w-3 h-3 flex-shrink-0" style={{ color: categoryColor }} />
                       </div>
                     </div>
@@ -156,7 +156,7 @@ export const AISuggestions = ({
           })}
         </div>
       ) : (
-        <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
+        <div className="text-center text-xs text-muted-foreground py-6 border border-dashed rounded-lg">
           {tasks.filter(t => t.completed).length === 0 
             ? "Complete some tasks to unlock AI suggestions"
             : "Click 'Get Ideas' to generate personalized task suggestions"}

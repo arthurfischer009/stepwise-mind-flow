@@ -30,17 +30,17 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor }: Current
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="space-y-2">
-        <div className="text-sm font-medium text-primary uppercase tracking-wider">
+    <div className="flex flex-col items-center justify-center min-h-[300px] text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-1">
+        <div className="text-xs font-medium text-primary uppercase tracking-wider">
           Level {level}
         </div>
         {task.category && categoryColor && (
           <div 
-            className="inline-block text-xs text-white font-semibold uppercase tracking-wide px-3 py-1 rounded-full"
+            className="inline-block text-[10px] text-white font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
             style={{ 
               backgroundColor: categoryColor,
-              boxShadow: `0 0 20px ${categoryColor}40`
+              boxShadow: `0 0 15px ${categoryColor}40`
             }}
           >
             {task.category}
@@ -50,30 +50,30 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor }: Current
 
       <div className="relative">
         <div 
-          className="absolute inset-0 blur-3xl opacity-50 animate-pulse"
+          className="absolute inset-0 blur-2xl opacity-40 animate-pulse"
           style={{
             background: categoryColor 
               ? `radial-gradient(circle, ${categoryColor}40, transparent 70%)`
               : 'linear-gradient(to right, hsl(var(--primary) / 0.2), hsl(var(--secondary) / 0.2), hsl(var(--accent) / 0.2))'
           }}
         />
-        <h1 className="relative text-4xl md:text-5xl lg:text-6xl font-bold leading-tight max-w-3xl px-4">
+        <h1 className="relative text-2xl md:text-3xl font-bold leading-tight max-w-2xl px-4">
           {task.title}
         </h1>
       </div>
 
       <Button
         onClick={onComplete}
-        size="lg"
-        className="group relative overflow-hidden px-8 py-6 text-lg font-semibold transition-all duration-300 hover:scale-105"
+        size="sm"
+        className="group relative overflow-hidden px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-105"
         style={{
           backgroundColor: categoryColor || 'hsl(var(--primary))',
           color: 'white',
-          boxShadow: categoryColor ? `0 0 40px ${categoryColor}80` : '0 0 40px hsl(var(--primary) / 0.5)'
+          boxShadow: categoryColor ? `0 0 30px ${categoryColor}80` : '0 0 30px hsl(var(--primary) / 0.5)'
         }}
       >
         <span className="relative z-10 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 transition-transform group-hover:scale-110" />
+          <CheckCircle2 className="w-4 h-4 transition-transform group-hover:scale-110" />
           Complete Level
         </span>
       </Button>

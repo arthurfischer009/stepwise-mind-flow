@@ -195,10 +195,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="container max-w-6xl mx-auto px-4 py-8">
-        <header className="text-center mb-8">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+      <div className="container max-w-6xl mx-auto px-4 py-4">
+        <header className="text-center mb-4">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
               Focus Quest
             </h1>
             <Button
@@ -211,17 +211,17 @@ const Index = () => {
               View Network
             </Button>
           </div>
-          <p className="text-muted-foreground">One task. One level. Total focus.</p>
+          <p className="text-sm text-muted-foreground">One task. One level. Total focus.</p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          <div className="space-y-8">
+        <div className="grid lg:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-4">
             <ProgressStats
               level={level}
               completedToday={completedToday}
               totalTasks={tasks.length}
             />
-            <div className="rounded-2xl bg-card border border-border p-8">
+            <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
                 task={currentTask}
                 onComplete={handleCompleteTask}
@@ -231,7 +231,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-card border border-border p-8">
+          <div className="rounded-2xl bg-card border border-border p-4">
             <TaskPlanner
               tasks={tasks}
               onAddTask={handleAddTask}
