@@ -197,7 +197,7 @@ const Index = () => {
     <div className="min-h-screen bg-background text-foreground">
       <div className="container max-w-6xl mx-auto px-4 py-4">
         <header className="text-center mb-4">
-          <div className="flex items-center justify-center gap-4 mb-2">
+          <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
               Focus Quest
             </h1>
@@ -208,7 +208,15 @@ const Index = () => {
               className="gap-2"
             >
               <Network className="w-4 h-4" />
-              View Network
+              Network
+            </Button>
+            <Button
+              onClick={() => navigate('/categories')}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              Categories
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">One task. One level. Total focus.</p>
