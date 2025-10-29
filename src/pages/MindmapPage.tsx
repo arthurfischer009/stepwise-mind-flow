@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ReactFlow, 
@@ -9,14 +9,16 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  ConnectionMode,
-  Panel
+  Panel,
+  NodeTypes
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
 import { getSupabase } from "@/lib/safeSupabase";
 import { useToast } from "@/hooks/use-toast";
+import { CategoryNode, CategoryNodeData } from "@/components/CategoryNode";
+import { TaskNode, TaskNodeData } from "@/components/TaskNode";
 
 interface Task {
   id: string;
@@ -39,10 +41,33 @@ const MindmapPage = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const nodeTypes: NodeTypes = useMemo(() => ({
+    category: CategoryNode,
+    task: TaskNode,
+  }), []);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      const supabase = getSupabase();
+      supabase.then(client => {
+        if (client) {
+          client.from('task_relationships')
+            .select('*')
+            .then(({ data }) => {
+              if (data) {
+                generateMindmap(tasks, data);
+              }
+            });
+        }
+      });
+    }
+  }, [expandedCategories, tasks.length]);
 
   const loadData = async () => {
     setLoading(true);
@@ -82,6 +107,18 @@ const MindmapPage = () => {
     }
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
   const generateMindmap = async (tasksData: Task[], relationshipsData: Relationship[]) => {
     if (tasksData.length === 0) {
       toast({
@@ -111,105 +148,98 @@ const MindmapPage = () => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    // Create category nodes (central hubs)
-    const categoryPositions = new Map<string, { x: number; y: number }>();
+    // Hierarchical layout - categories in a vertical column
     const categoryArray = Array.from(categories.keys());
-    const radius = 300;
-    const centerX = 400;
-    const centerY = 300;
+    const startY = 100;
+    const categorySpacing = 250;
+    const startX = 400;
 
     categoryArray.forEach((category, idx) => {
-      const angle = (idx / categoryArray.length) * 2 * Math.PI;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      
-      categoryPositions.set(category, { x, y });
+      const categoryY = startY + idx * categorySpacing;
+      const categoryTasks = categories.get(category) || [];
+      const isExpanded = expandedCategories.has(category);
 
+      // Create category node
       newNodes.push({
         id: `cat-${category}`,
-        type: 'default',
-        position: { x, y },
-        data: { label: category },
-        style: {
-          background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))',
-          color: 'white',
-          border: '2px solid hsl(var(--primary))',
-          borderRadius: '12px',
-          padding: '16px',
-          fontSize: '14px',
-          fontWeight: 'bold',
-          minWidth: '120px',
-          textAlign: 'center',
-        },
-      });
-    });
-
-    // Create task nodes around their categories
-    tasksData.forEach((task, idx) => {
-      const cat = task.category || 'Uncategorized';
-      const catPos = categoryPositions.get(cat) || { x: centerX, y: centerY };
-      const catTasks = categories.get(cat) || [];
-      const taskIdx = catTasks.indexOf(task);
-      const taskCount = catTasks.length;
-
-      // Position tasks in a circle around their category
-      const taskRadius = 150;
-      const angle = (taskIdx / taskCount) * 2 * Math.PI;
-      const x = catPos.x + taskRadius * Math.cos(angle);
-      const y = catPos.y + taskRadius * Math.sin(angle);
-
-      newNodes.push({
-        id: task.id,
-        type: 'default',
-        position: { x, y },
-        data: { label: task.title },
-        style: {
-          background: task.completed ? 'hsl(var(--accent))' : 'hsl(var(--card))',
-          color: task.completed ? 'white' : 'hsl(var(--foreground))',
-          border: `2px solid ${task.completed ? 'hsl(var(--accent))' : 'hsl(var(--border))'}`,
-          borderRadius: '8px',
-          padding: '10px',
-          fontSize: '12px',
-          maxWidth: '150px',
-          opacity: task.completed ? 0.7 : 1,
-        },
+        type: 'category',
+        position: { x: startX, y: categoryY },
+        data: { 
+          label: category,
+          taskCount: categoryTasks.length,
+          isExpanded,
+          onToggle: () => toggleCategory(category)
+        } as CategoryNodeData,
       });
 
-      // Connect task to category
-      newEdges.push({
-        id: `${task.id}-to-cat-${cat}`,
-        source: task.id,
-        target: `cat-${cat}`,
-        type: 'straight',
-        style: { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, opacity: 0.3 },
-        animated: false,
-      });
-    });
+      // Only show task nodes if category is expanded
+      if (isExpanded) {
+        const tasksPerRow = 4;
+        const taskSpacing = 200;
+        const rowSpacing = 80;
 
-    // Add relationship edges
-    relationshipsData.forEach(rel => {
-      const sourceExists = tasksData.some(t => t.id === rel.from_task_id);
-      const targetExists = tasksData.some(t => t.id === rel.to_task_id);
+        categoryTasks.forEach((task, taskIdx) => {
+          const row = Math.floor(taskIdx / tasksPerRow);
+          const col = taskIdx % tasksPerRow;
+          
+          // Center the tasks under the category
+          const totalTasksInRow = Math.min(tasksPerRow, categoryTasks.length - row * tasksPerRow);
+          const rowStartX = startX - (totalTasksInRow - 1) * taskSpacing / 2;
+          
+          const taskX = rowStartX + col * taskSpacing;
+          const taskY = categoryY + 80 + row * rowSpacing;
 
-      if (sourceExists && targetExists) {
-        const edgeColor = 
-          rel.relationship_type === 'sequential' ? 'hsl(var(--primary))' :
-          rel.relationship_type === 'related' ? 'hsl(var(--secondary))' :
-          'hsl(var(--accent))';
+          newNodes.push({
+            id: task.id,
+            type: 'task',
+            position: { x: taskX, y: taskY },
+            data: { 
+              label: task.title,
+              completed: task.completed
+            } as TaskNodeData,
+          });
 
-        newEdges.push({
-          id: `${rel.from_task_id}-${rel.to_task_id}`,
-          source: rel.from_task_id,
-          target: rel.to_task_id,
-          type: 'smoothstep',
-          animated: rel.relationship_type === 'sequential',
-          style: { 
-            stroke: edgeColor, 
-            strokeWidth: Math.max(1, rel.strength * 3),
-            opacity: 0.6 
-          },
-          label: rel.relationship_type,
-          labelStyle: { fontSize: 10, fill: edgeColor },
+          // Connect task to category
+          newEdges.push({
+            id: `${task.id}-to-cat-${category}`,
+            source: `cat-${category}`,
+            target: task.id,
+            type: 'smoothstep',
+            style: { 
+              stroke: 'hsl(var(--border))', 
+              strokeWidth: 1.5,
+              opacity: 0.4 
+            },
+            animated: false,
+          });
+        });
+
+        // Add relationship edges only for visible (expanded) tasks
+        relationshipsData.forEach(rel => {
+          const sourceTask = categoryTasks.find(t => t.id === rel.from_task_id);
+          const targetTask = tasksData.find(t => t.id === rel.to_task_id);
+          const targetCategory = targetTask?.category || 'Uncategorized';
+
+          // Only show edge if both tasks are visible (their categories are expanded)
+          if (sourceTask && targetTask && expandedCategories.has(targetCategory)) {
+            const edgeColor = 
+              rel.relationship_type === 'sequential' ? 'hsl(var(--primary))' :
+              rel.relationship_type === 'related' ? 'hsl(var(--secondary))' :
+              'hsl(var(--accent))';
+
+            newEdges.push({
+              id: `rel-${rel.from_task_id}-${rel.to_task_id}`,
+              source: rel.from_task_id,
+              target: rel.to_task_id,
+              type: 'smoothstep',
+              animated: rel.relationship_type === 'sequential',
+              style: { 
+                stroke: edgeColor, 
+                strokeWidth: Math.max(1.5, rel.strength * 2.5),
+                opacity: 0.5
+              },
+            });
+          }
         });
       }
     });
@@ -308,10 +338,10 @@ const MindmapPage = () => {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            connectionMode={ConnectionMode.Loose}
+            nodeTypes={nodeTypes}
             fitView
-            minZoom={0.1}
-            maxZoom={4}
+            minZoom={0.2}
+            maxZoom={2}
             defaultEdgeOptions={{
               type: 'smoothstep',
               animated: false,
