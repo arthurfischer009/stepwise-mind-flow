@@ -20,14 +20,15 @@ serve(async (req) => {
     }
 
     const systemPrompt = `You are a productivity AI assistant for Focus Quest, a game-like task management app. 
-    Analyze the user's completed tasks and suggest 3-5 relevant next tasks that would naturally follow from their work patterns.
-    Consider task categories, timing, and logical progression.
+    Analyze the user's completed tasks and suggest 3-4 relevant next tasks PER CATEGORY.
+    Consider task categories, timing, and logical progression within each category.
     Make suggestions actionable and specific.`;
 
     const userPrompt = `Based on these completed tasks: ${JSON.stringify(completedTasks)}
     And current categories: ${JSON.stringify(currentCategories)}
     
-    Suggest 3-5 new tasks that would be good next steps. Consider natural workflow progression.`;
+    For EACH existing category, suggest 3-4 new tasks that would be good next steps. 
+    Generate suggestions for all categories that have completed tasks.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -46,7 +47,7 @@ serve(async (req) => {
             type: 'function',
             function: {
               name: 'suggest_tasks',
-              description: 'Return 3-5 actionable task suggestions with categories',
+              description: 'Return 3-4 task suggestions PER category',
               parameters: {
                 type: 'object',
                 properties: {
