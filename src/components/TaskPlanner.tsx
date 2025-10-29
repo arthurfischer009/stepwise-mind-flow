@@ -83,9 +83,12 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask }: TaskPlannerProps
   };
 
   const applySuggestion = (suggestion: Suggestion) => {
-    setNewTask(suggestion.title);
-    setCategory(suggestion.category);
+    onAddTask(suggestion.title, suggestion.category);
     setSuggestions(prev => prev.filter(s => s.title !== suggestion.title));
+    toast({
+      title: "Task hinzugefügt",
+      description: suggestion.title,
+    });
   };
 
   const quickSuggestions = [
