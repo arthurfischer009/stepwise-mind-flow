@@ -11,9 +11,10 @@ interface CurrentLevelProps {
   task: Task | null;
   onComplete: () => void;
   level: number;
+  categoryColor?: string;
 }
 
-export const CurrentLevel = ({ task, onComplete, level }: CurrentLevelProps) => {
+export const CurrentLevel = ({ task, onComplete, level, categoryColor }: CurrentLevelProps) => {
   if (!task) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
@@ -34,15 +35,28 @@ export const CurrentLevel = ({ task, onComplete, level }: CurrentLevelProps) => 
         <div className="text-sm font-medium text-primary uppercase tracking-wider">
           Level {level}
         </div>
-        {task.category && (
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">
+        {task.category && categoryColor && (
+          <div 
+            className="inline-block text-xs text-white font-semibold uppercase tracking-wide px-3 py-1 rounded-full"
+            style={{ 
+              backgroundColor: categoryColor,
+              boxShadow: `0 0 20px ${categoryColor}40`
+            }}
+          >
             {task.category}
           </div>
         )}
       </div>
 
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 blur-3xl opacity-50 animate-pulse" />
+        <div 
+          className="absolute inset-0 blur-3xl opacity-50 animate-pulse"
+          style={{
+            background: categoryColor 
+              ? `radial-gradient(circle, ${categoryColor}40, transparent 70%)`
+              : 'linear-gradient(to right, hsl(var(--primary) / 0.2), hsl(var(--secondary) / 0.2), hsl(var(--accent) / 0.2))'
+          }}
+        />
         <h1 className="relative text-4xl md:text-5xl lg:text-6xl font-bold leading-tight max-w-3xl px-4">
           {task.title}
         </h1>
@@ -51,7 +65,12 @@ export const CurrentLevel = ({ task, onComplete, level }: CurrentLevelProps) => 
       <Button
         onClick={onComplete}
         size="lg"
-        className="group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_hsl(var(--primary)/0.5)]"
+        className="group relative overflow-hidden px-8 py-6 text-lg font-semibold transition-all duration-300 hover:scale-105"
+        style={{
+          backgroundColor: categoryColor || 'hsl(var(--primary))',
+          color: 'white',
+          boxShadow: categoryColor ? `0 0 40px ${categoryColor}80` : '0 0 40px hsl(var(--primary) / 0.5)'
+        }}
       >
         <span className="relative z-10 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 transition-transform group-hover:scale-110" />

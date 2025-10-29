@@ -15,15 +15,15 @@ export const TaskNode = memo(({ data }: { data: TaskNodeData }) => {
       <div className={`
         px-4 py-2 rounded-md border transition-all
         ${data.completed 
-          ? 'bg-accent/20 border-accent text-accent-foreground opacity-70' 
-          : 'bg-card border-border hover:border-primary hover:shadow-md'
+          ? 'bg-accent/20 border-accent text-white/70 opacity-70' 
+          : 'bg-card border-border hover:border-primary hover:shadow-md text-white'
         }
       `}>
         <div className="flex items-center gap-2">
           {data.completed ? (
-            <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
+            <CheckCircle2 className="w-3 h-3 flex-shrink-0 text-white" />
           ) : (
-            <Circle className="w-3 h-3 flex-shrink-0" />
+            <Circle className="w-3 h-3 flex-shrink-0 text-white" />
           )}
           <div className="text-xs font-medium max-w-[150px] truncate">
             {data.label}

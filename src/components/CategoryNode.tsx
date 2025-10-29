@@ -30,8 +30,8 @@ export const CategoryNode = memo(({ data }: { data: CategoryNodeData }) => {
             <ChevronRight className="w-4 h-4" style={{ color: data.color }} />
           )}
           <div>
-            <div className="font-bold text-sm text-foreground">{data.label}</div>
-            <div className="text-xs text-muted-foreground">{data.taskCount} tasks</div>
+            <div className="font-bold text-sm text-white">{data.label}</div>
+            <div className="text-xs text-white/70">{data.taskCount} tasks</div>
           </div>
         </div>
       </div>

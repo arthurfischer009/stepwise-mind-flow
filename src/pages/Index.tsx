@@ -26,6 +26,27 @@ const Index = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const { toast } = useToast();
 
+  // Define color palette for categories (matching MindmapPage)
+  const categoryColorPalette = [
+    'hsl(var(--primary))',
+    'hsl(var(--secondary))',
+    'hsl(var(--accent))',
+    'hsl(280, 80%, 60%)', // Purple
+    'hsl(200, 80%, 60%)', // Blue
+    'hsl(160, 80%, 50%)', // Teal
+    'hsl(30, 90%, 60%)',  // Orange
+    'hsl(340, 80%, 60%)', // Pink
+  ];
+
+  // Create category to color mapping
+  const categoryColors = tasks.reduce((acc, task) => {
+    if (task.category && !acc[task.category]) {
+      const uniqueCategories = Object.keys(acc);
+      acc[task.category] = categoryColorPalette[uniqueCategories.length % categoryColorPalette.length];
+    }
+    return acc;
+  }, {} as { [key: string]: string });
+
   // Load tasks from database
   useEffect(() => {
     loadTasks();
@@ -65,6 +86,7 @@ const Index = () => {
 
   const currentTask = tasks.find((t) => !t.completed) || null;
   const completedToday = tasks.filter((t) => t.completed).length;
+  const currentTaskColor = currentTask?.category ? categoryColors[currentTask.category] : undefined;
 
   const handleAddTask = async (title: string, category?: string) => {
     try {
@@ -203,6 +225,7 @@ const Index = () => {
                 task={currentTask}
                 onComplete={handleCompleteTask}
                 level={level}
+                categoryColor={currentTaskColor}
               />
             </div>
           </div>
@@ -214,6 +237,7 @@ const Index = () => {
               onDeleteTask={handleDeleteTask}
               suggestions={suggestions}
               onSuggestionsChange={setSuggestions}
+              categoryColors={categoryColors}
             />
           </div>
         </div>

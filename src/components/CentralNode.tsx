@@ -10,7 +10,7 @@ export const CentralNode = memo(({ data }: { data: CentralNodeData }) => {
     <div className="relative">
       <div className="px-8 py-6 rounded-full border-4 border-primary bg-gradient-to-br from-primary/30 via-secondary/30 to-accent/30 shadow-2xl">
         <div className="text-center">
-          <div className="font-bold text-lg text-foreground whitespace-nowrap">
+          <div className="font-bold text-lg text-white whitespace-nowrap">
             {data.label}
           </div>
         </div>

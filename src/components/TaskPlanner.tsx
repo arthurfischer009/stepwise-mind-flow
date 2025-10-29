@@ -19,6 +19,7 @@ interface TaskPlannerProps {
   onDeleteTask: (id: string) => void;
   suggestions: Suggestion[];
   onSuggestionsChange: (suggestions: Suggestion[]) => void;
+  categoryColors: { [key: string]: string };
 }
 
 interface Suggestion {
@@ -27,7 +28,7 @@ interface Suggestion {
   reasoning: string;
 }
 
-export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, suggestions, onSuggestionsChange }: TaskPlannerProps) => {
+export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, suggestions, onSuggestionsChange, categoryColors }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
@@ -224,7 +225,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, suggestions, onSug
 
         {/* Task List Column */}
         <div>
-          <TaskList tasks={tasks} onDeleteTask={onDeleteTask} />
+          <TaskList tasks={tasks} onDeleteTask={onDeleteTask} categoryColors={categoryColors} />
         </div>
       </div>
     </div>
