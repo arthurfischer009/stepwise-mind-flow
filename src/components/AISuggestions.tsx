@@ -114,32 +114,42 @@ export const AISuggestions = ({
       </div>
 
       {suggestions.length > 0 ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {suggestions.map((suggestion, index) => {
-            const categoryColor = categoryColors[suggestion.category] || 'hsl(var(--primary))';
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {Object.entries(
+            suggestions.reduce((acc, suggestion) => {
+              const cat = suggestion.category || 'Other';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(suggestion);
+              return acc;
+            }, {} as Record<string, Suggestion[]>)
+          ).map(([category, items]) => {
+            const categoryColor = categoryColors[category] || 'hsl(var(--primary))';
             
             return (
-              <div
-                key={index}
-                className="flex-shrink-0 w-64 p-4 rounded-lg border-2 transition-all cursor-pointer hover:shadow-lg"
-                style={{
-                  borderColor: categoryColor,
-                  background: `linear-gradient(135deg, ${categoryColor}15, ${categoryColor}05)`
-                }}
-                onClick={() => applySuggestion(suggestion)}
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div 
-                    className="text-xs font-bold text-white px-2 py-1 rounded-full"
-                    style={{ backgroundColor: categoryColor }}
-                  >
-                    {suggestion.category}
-                  </div>
-                  <Plus className="w-4 h-4 flex-shrink-0" style={{ color: categoryColor }} />
+              <div key={category} className="flex-shrink-0 space-y-2">
+                <div 
+                  className="text-xs font-bold text-white px-3 py-1 rounded-full inline-block"
+                  style={{ backgroundColor: categoryColor }}
+                >
+                  {category}
                 </div>
-                <div className="font-semibold text-sm mb-2 leading-tight">{suggestion.title}</div>
-                <div className="text-xs text-muted-foreground line-clamp-2">
-                  {suggestion.reasoning}
+                <div className="space-y-1.5">
+                  {items.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="w-48 p-2 rounded-md border transition-all cursor-pointer hover:shadow-md"
+                      style={{
+                        borderColor: categoryColor,
+                        background: `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}05)`
+                      }}
+                      onClick={() => applySuggestion(suggestion)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-medium leading-tight flex-1">{suggestion.title}</div>
+                        <Plus className="w-3 h-3 flex-shrink-0" style={{ color: categoryColor }} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
