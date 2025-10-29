@@ -124,8 +124,28 @@ export const AISuggestions = ({
               acc[cat].push(suggestion);
               return acc;
             }, {} as Record<string, Suggestion[]>)
-          ).map(([category, items]) => {
-            const categoryColor = categoryColors[category] || 'hsl(221, 83%, 53%)';
+  ).map(([category, items]) => {
+            // Generate consistent color based on category name if no color exists
+            const getCategoryColor = (cat: string): string => {
+              if (categoryColors[cat]) return categoryColors[cat];
+              
+              const palette = [
+                'hsl(221, 83%, 53%)',   // Blue
+                'hsl(142, 76%, 36%)',   // Green
+                'hsl(262, 83%, 58%)',   // Purple
+                'hsl(346, 77%, 50%)',   // Red
+                'hsl(48, 96%, 53%)',    // Yellow
+                'hsl(198, 93%, 60%)',   // Cyan
+                'hsl(31, 97%, 52%)',    // Orange
+                'hsl(328, 86%, 70%)',   // Pink
+              ];
+              
+              // Use category name to generate consistent index
+              const hash = cat.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+              return palette[hash % palette.length];
+            };
+            
+            const categoryColor = getCategoryColor(category);
             
             return (
               <div key={category} className="flex-shrink-0 space-y-1.5">

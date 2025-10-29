@@ -143,6 +143,34 @@ const Index = () => {
         return;
       }
 
+      // Auto-create category if it doesn't exist and category is provided
+      if (category && !categories.find(c => c.name === category)) {
+        const categoryColorPalette = [
+          'hsl(221, 83%, 53%)',   // Blue
+          'hsl(142, 76%, 36%)',   // Green
+          'hsl(262, 83%, 58%)',   // Purple
+          'hsl(346, 77%, 50%)',   // Red
+          'hsl(48, 96%, 53%)',    // Yellow
+          'hsl(198, 93%, 60%)',   // Cyan
+          'hsl(31, 97%, 52%)',    // Orange
+          'hsl(328, 86%, 70%)',   // Pink
+        ];
+        
+        const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
+        
+        const { error: catError } = await supabase
+          .from('categories')
+          .insert({ name: category, color: defaultColor, user_id: user?.id });
+
+        if (!catError) {
+          // Reload categories
+          const { data: categoriesData } = await supabase
+            .from('categories')
+            .select('*');
+          setCategories(categoriesData || []);
+        }
+      }
+
       const maxSortOrder = Math.max(...tasks.map(t => t.sort_order || 0), 0);
 
       const { data, error } = await supabase

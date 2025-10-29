@@ -154,11 +154,16 @@ const CategoriesPage = () => {
 
       // Add category with a default color
       const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('categories')
-        .insert({ name: trimmed, color: defaultColor, user_id: user?.id });
+        .insert({ name: trimmed, color: defaultColor, user_id: user?.id })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Category insert error:', error);
+        throw error;
+      }
 
       await loadData();
       setNewCategory("");
@@ -171,7 +176,7 @@ const CategoriesPage = () => {
       console.error('Error adding category:', error);
       toast({
         title: "Error",
-        description: "Failed to add category",
+        description: error.message || "Failed to add category",
         variant: "destructive",
       });
     }
