@@ -170,10 +170,23 @@ const MindmapPage = () => {
     const totalCategoryWidth = (categoryArray.length - 1) * categorySpacing;
     const categoryStartX = centerX - totalCategoryWidth / 2;
 
+    // Define color palette for categories
+    const categoryColors = [
+      'hsl(var(--primary))',
+      'hsl(var(--secondary))',
+      'hsl(var(--accent))',
+      'hsl(280, 80%, 60%)', // Purple
+      'hsl(200, 80%, 60%)', // Blue
+      'hsl(160, 80%, 50%)', // Teal
+      'hsl(30, 90%, 60%)',  // Orange
+      'hsl(340, 80%, 60%)', // Pink
+    ];
+
     categoryArray.forEach((category, idx) => {
       const categoryX = categoryStartX + idx * categorySpacing;
       const categoryTasks = categories.get(category) || [];
       const isExpanded = expandedCategories.has(category);
+      const categoryColor = categoryColors[idx % categoryColors.length];
 
       // Create category node
       newNodes.push({
@@ -184,7 +197,8 @@ const MindmapPage = () => {
           label: category,
           taskCount: categoryTasks.length,
           isExpanded,
-          onToggle: () => toggleCategory(category)
+          onToggle: () => toggleCategory(category),
+          color: categoryColor
         } as CategoryNodeData,
       });
 
@@ -195,7 +209,7 @@ const MindmapPage = () => {
         target: `cat-${category}`,
         type: 'smoothstep',
         style: { 
-          stroke: 'hsl(var(--primary))', 
+          stroke: categoryColor, 
           strokeWidth: 2,
           opacity: 0.6 
         },

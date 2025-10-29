@@ -7,6 +7,7 @@ export type CategoryNodeData = {
   taskCount: number;
   isExpanded: boolean;
   onToggle: () => void;
+  color: string;
 };
 
 export const CategoryNode = memo(({ data }: { data: CategoryNodeData }) => {
@@ -15,14 +16,18 @@ export const CategoryNode = memo(({ data }: { data: CategoryNodeData }) => {
       <Handle type="target" position={Position.Top} className="opacity-0" />
       
       <div 
-        className="px-6 py-3 rounded-lg border-2 border-primary bg-gradient-to-r from-primary/20 to-secondary/20 cursor-pointer hover:shadow-lg transition-all"
+        className="px-6 py-3 rounded-lg border-2 cursor-pointer hover:shadow-lg transition-all"
+        style={{
+          borderColor: data.color,
+          background: `linear-gradient(135deg, ${data.color}20, ${data.color}10)`
+        }}
         onClick={data.onToggle}
       >
         <div className="flex items-center gap-2">
           {data.isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-primary" />
+            <ChevronDown className="w-4 h-4" style={{ color: data.color }} />
           ) : (
-            <ChevronRight className="w-4 h-4 text-primary" />
+            <ChevronRight className="w-4 h-4" style={{ color: data.color }} />
           )}
           <div>
             <div className="font-bold text-sm text-foreground">{data.label}</div>
