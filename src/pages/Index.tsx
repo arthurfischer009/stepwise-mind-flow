@@ -7,7 +7,6 @@ import { AISuggestions } from "@/components/AISuggestions";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network, BarChart3, LogOut } from "lucide-react";
-import { getSupabase } from "@/lib/safeSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { isWithinInterval, parseISO } from "date-fns";
@@ -87,15 +86,6 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({
-          title: "Backend not ready",
-          description: "Refresh the page to finish Cloud setup.",
-        });
-        return;
-      }
-
       // Load tasks
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
@@ -144,12 +134,6 @@ const Index = () => {
 
   const handleAddTask = async (title: string, category?: string) => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        return;
-      }
-
       if (!user) {
         toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
         return;
@@ -227,12 +211,6 @@ const Index = () => {
     if (!currentTask) return;
 
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        return;
-      }
-
       const { error } = await supabase
         .from('tasks')
         .update({ completed: true, completed_at: new Date().toISOString() })
@@ -261,12 +239,6 @@ const Index = () => {
 
   const handleDeleteTask = async (id: string) => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        return;
-      }
-
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -288,9 +260,6 @@ const Index = () => {
   const handleReorderTasks = async (reorderedTasks: Task[]) => {
     try {
       setTasks(reorderedTasks);
-
-      const supabase = await getSupabase();
-      if (!supabase) return;
 
       // Update sort_order for all reordered tasks
       const updates = reorderedTasks.map((task, index) => ({
@@ -316,12 +285,6 @@ const Index = () => {
 
   const handleUpdatePoints = async (id: string, points: number) => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        return;
-      }
-
       const { error } = await supabase
         .from('tasks')
         .update({ points })
@@ -344,12 +307,6 @@ const Index = () => {
 
   const handleUpdateCategory = async (id: string, category: string | undefined) => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) {
-        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
-        return;
-      }
-
       const { error } = await supabase
         .from('tasks')
         .update({ category })
