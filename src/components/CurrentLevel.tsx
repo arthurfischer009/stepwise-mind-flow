@@ -60,35 +60,42 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor, categorie
           <span className="text-[10px]">(45 min)</span>
         </div>
         {onUpdateCategory && categories.length > 0 && (
-          <Select
-            value={task.category || "none"}
-            onValueChange={(value) => onUpdateCategory(task.id, value === "none" ? undefined : value)}
-          >
-            <SelectTrigger 
-              className="w-[180px] h-7 text-xs border"
-              style={{
-                borderColor: categoryColor || 'hsl(var(--border))',
-                backgroundColor: categoryColor ? `${categoryColor}10` : undefined
-              }}
+          <div className="mt-2">
+            <Select
+              value={task.category || "none"}
+              onValueChange={(value) => onUpdateCategory(task.id, value === "none" ? undefined : value)}
             >
-              <Tag className="w-3 h-3 mr-1" />
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="none">No category</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.name} value={cat.name}>
+              <SelectTrigger 
+                className="w-[200px] h-8 text-xs mx-auto"
+                style={{
+                  borderColor: categoryColor || 'hsl(var(--border))',
+                  backgroundColor: categoryColor ? `${categoryColor}15` : 'hsl(var(--card))'
+                }}
+              >
+                <Tag className="w-3 h-3 mr-1.5" />
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border border-border shadow-lg z-[100]">
+                <SelectItem value="none" className="text-xs">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
+                    <div className="w-3 h-3 rounded-full bg-muted" />
+                    No category
                   </div>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.name} value={cat.name} className="text-xs">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         {task.category && categoryColor && !onUpdateCategory && (
           <div 
