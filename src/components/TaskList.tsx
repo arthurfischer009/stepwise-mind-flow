@@ -22,9 +22,10 @@ interface TaskListProps {
 export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, categoryColors }: TaskListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [editingPoints, setEditingPoints] = useState<string | null>(null);
-  const pendingTasks = tasks.filter((t) => !t.completed);
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const pendingTasks = (draggedIndex !== null ? localTasks : tasks.filter((t) => !t.completed));
 
-  if (pendingTasks.length === 0) return null;
+  if (tasks.filter((t) => !t.completed).length === 0) return null;
 
   // Calculate start time for each task
   // First task starts in 75 minutes (after current task completes)
@@ -37,24 +38,29 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
+    setLocalTasks(tasks.filter((t) => !t.completed));
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
 
-    const newTasks = [...pendingTasks];
+    const newTasks = [...localTasks];
     const draggedTask = newTasks[draggedIndex];
     newTasks.splice(draggedIndex, 1);
     newTasks.splice(index, 0, draggedTask);
     
-    const completedTasks = tasks.filter((t) => t.completed);
-    onReorderTasks([...newTasks, ...completedTasks]);
+    setLocalTasks(newTasks);
     setDraggedIndex(index);
   };
 
   const handleDragEnd = () => {
+    if (draggedIndex !== null) {
+      const completedTasks = tasks.filter((t) => t.completed);
+      onReorderTasks([...localTasks, ...completedTasks]);
+    }
     setDraggedIndex(null);
+    setLocalTasks([]);
   };
 
   return (
@@ -74,11 +80,12 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
               onDragStart={() => handleDragStart(index)}
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
-              className="group flex items-center gap-2 p-2 rounded bg-card border transition-all cursor-move"
+              className="group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
               style={{
                 borderColor: categoryColor || 'hsl(var(--border))',
                 backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
-                opacity: draggedIndex === index ? 0.5 : 1
+                opacity: draggedIndex === index ? 0.5 : 1,
+                transform: draggedIndex === index ? 'scale(1.02)' : 'scale(1)'
               }}
             >
               <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
