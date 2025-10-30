@@ -1,5 +1,12 @@
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, addMinutes } from "date-fns";
 
 interface Task {
@@ -9,14 +16,21 @@ interface Task {
   points?: number;
 }
 
+interface Category {
+  name: string;
+  color: string;
+}
+
 interface CurrentLevelProps {
   task: Task | null;
   onComplete: () => void;
   level: number;
   categoryColor?: string;
+  categories?: Category[];
+  onUpdateCategory?: (taskId: string, category: string | undefined) => void;
 }
 
-export const CurrentLevel = ({ task, onComplete, level, categoryColor }: CurrentLevelProps) => {
+export const CurrentLevel = ({ task, onComplete, level, categoryColor, categories = [], onUpdateCategory }: CurrentLevelProps) => {
   const now = new Date();
   const endTime = addMinutes(now, 45);
   
@@ -45,7 +59,38 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor }: Current
           <span>{format(now, 'HH:mm')} - {format(endTime, 'HH:mm')}</span>
           <span className="text-[10px]">(45 min)</span>
         </div>
-        {task.category && categoryColor && (
+        {onUpdateCategory && categories.length > 0 && (
+          <Select
+            value={task.category || "none"}
+            onValueChange={(value) => onUpdateCategory(task.id, value === "none" ? undefined : value)}
+          >
+            <SelectTrigger 
+              className="w-[180px] h-7 text-xs border"
+              style={{
+                borderColor: categoryColor || 'hsl(var(--border))',
+                backgroundColor: categoryColor ? `${categoryColor}10` : undefined
+              }}
+            >
+              <Tag className="w-3 h-3 mr-1" />
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="none">No category</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.name} value={cat.name}>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {task.category && categoryColor && !onUpdateCategory && (
           <div 
             className="inline-block text-[10px] text-white font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
             style={{ 

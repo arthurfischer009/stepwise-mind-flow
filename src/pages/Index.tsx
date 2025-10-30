@@ -342,6 +342,39 @@ const Index = () => {
     }
   };
 
+  const handleUpdateCategory = async (id: string, category: string | undefined) => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        toast({ title: "Backend not ready", description: "Refresh the page and try again." });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ category })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, category } : t))
+      );
+      
+      toast({
+        title: "Category Updated",
+        description: category ? `Task assigned to ${category}` : "Category removed",
+      });
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update category",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -417,6 +450,8 @@ const Index = () => {
                 onComplete={handleCompleteTask}
                 level={level}
                 categoryColor={currentTaskColor}
+                categories={categories}
+                onUpdateCategory={handleUpdateCategory}
               />
             </div>
           </div>
