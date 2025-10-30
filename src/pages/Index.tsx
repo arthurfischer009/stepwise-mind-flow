@@ -464,6 +464,7 @@ const Index = () => {
               onReorderTasks={handleReorderTasks}
               onUpdatePoints={handleUpdatePoints}
               categoryColors={categoryColors}
+              categories={categories}
             />
           </div>
         </div>
