@@ -155,45 +155,60 @@ const Index = () => {
         return;
       }
 
-      // Auto-create category if it doesn't exist and category is provided
-      if (category && !categories.find(c => c.name === category)) {
-        const categoryColorPalette = [
-          'hsl(221, 83%, 53%)',   // Blue
-          'hsl(142, 76%, 36%)',   // Green
-          'hsl(262, 83%, 58%)',   // Purple
-          'hsl(346, 77%, 50%)',   // Red
-          'hsl(48, 96%, 53%)',    // Yellow
-          'hsl(198, 93%, 60%)',   // Cyan
-          'hsl(31, 97%, 52%)',    // Orange
-          'hsl(328, 86%, 70%)',   // Pink
-        ];
-        
-        const defaultColor = categoryColorPalette[categories.length % categoryColorPalette.length];
-        
-        const { error: catError } = await supabase
-          .from('categories')
-          .insert({ name: category, color: defaultColor, user_id: user.id });
-
-        if (!catError) {
-          // Reload categories
-          const { data: categoriesData } = await supabase
-            .from('categories')
-            .select('*');
-          setCategories(categoriesData || []);
-        }
-      }
-
       const maxSortOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order || 0)) : 0;
 
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user.id })
-        .select()
-        .single();
+      // Auto-create category in parallel if needed
+      const needsNewCategory = category && !categories.find(c => c.name === category);
+      
+      const categoryColorPalette = [
+        'hsl(221, 83%, 53%)',   // Blue
+        'hsl(142, 76%, 36%)',   // Green
+        'hsl(262, 83%, 58%)',   // Purple
+        'hsl(346, 77%, 50%)',   // Red
+        'hsl(48, 96%, 53%)',    // Yellow
+        'hsl(198, 93%, 60%)',   // Cyan
+        'hsl(31, 97%, 52%)',    // Orange
+        'hsl(328, 86%, 70%)',   // Pink
+      ];
 
-      if (error) throw error;
+      // Run task and category creation in parallel
+      const promises = [
+        supabase
+          .from('tasks')
+          .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user.id })
+          .select()
+          .single()
+      ];
 
-      setTasks((prev) => [...prev, data]);
+      if (needsNewCategory) {
+        const usedColors = new Set(categories.map(c => c.color));
+        const availableColors = categoryColorPalette.filter(color => !usedColors.has(color));
+        const defaultColor = availableColors.length > 0 
+          ? availableColors[0] 
+          : categoryColorPalette[categories.length % categoryColorPalette.length];
+        
+        promises.push(
+          supabase
+            .from('categories')
+            .insert({ name: category, color: defaultColor, user_id: user.id })
+            .select()
+            .single()
+        );
+      }
+
+      const results = await Promise.all(promises);
+      const taskResult = results[0];
+
+      if (taskResult.error) throw taskResult.error;
+
+      // Update local state
+      setTasks((prev) => [...prev, taskResult.data]);
+      
+      // Update categories if a new one was created
+      if (needsNewCategory && results[1]?.data) {
+        setCategories((prev) => [...prev, results[1].data]);
+      }
+
       toast({
         title: "Task Added",
         description: "New challenge accepted!",
