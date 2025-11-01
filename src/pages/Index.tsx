@@ -11,11 +11,33 @@ import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star } from "lucide-react";
+import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { isWithinInterval, parseISO, format } from "date-fns";
+import {
+  LineChart,
+  Line,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts";
 import { getCustomDayBoundaries } from "@/lib/dateUtils";
 import { ACHIEVEMENTS, Achievement, AchievementCheckData } from "@/lib/achievements";
 import { triggerLevelUpConfetti, triggerAchievementConfetti } from "@/lib/confetti";
@@ -950,6 +972,265 @@ const Index = () => {
                 tasks={tasks}
                 categoryColors={categoryColors}
               />
+            </div>
+          </div>
+          
+          {/* Charts Section */}
+          <div className="mt-8 space-y-4">
+            <h2 className="text-2xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+              Progress Charts
+            </h2>
+            
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Chart: Last 7 Days Progress */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Last 7 Days Progress
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={(() => {
+                    return Array.from({ length: 7 }, (_, i) => {
+                      const daysAgo = 6 - i;
+                      const { start, end } = getCustomDayBoundaries(daysAgo);
+                      return {
+                        date: format(start, 'MMM dd'),
+                        completed: tasks.filter(t => {
+                          if (!t.completed || !t.completed_at) return false;
+                          const completedDate = parseISO(t.completed_at);
+                          return isWithinInterval(completedDate, { start, end });
+                        }).length,
+                      };
+                    });
+                  })()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Area type="monotone" dataKey="completed" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart: Tasks by Category */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-primary" />
+                  Tasks by Category
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={(() => {
+                        const categoryMap = new Map<string, number>();
+                        tasks.forEach(task => {
+                          const cat = task.category || 'Uncategorized';
+                          categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+                        });
+                        return Array.from(categoryMap.entries()).map(([name, value]) => ({
+                          name,
+                          value,
+                          color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                        }));
+                      })()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="hsl(var(--primary))"
+                      dataKey="value"
+                    >
+                      {(() => {
+                        const categoryMap = new Map<string, number>();
+                        tasks.forEach(task => {
+                          const cat = task.category || 'Uncategorized';
+                          categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+                        });
+                        return Array.from(categoryMap.entries()).map(([name, value]) => ({
+                          name,
+                          value,
+                          color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                        }));
+                      })().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart: Completion Rate by Category */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  Completion Rate by Category
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <RechartsBarChart data={(() => {
+                    const categoryMap = new Map<string, { total: number; completed: number }>();
+                    tasks.forEach(task => {
+                      const cat = task.category || 'Uncategorized';
+                      const current = categoryMap.get(cat) || { total: 0, completed: 0 };
+                      categoryMap.set(cat, {
+                        total: current.total + 1,
+                        completed: current.completed + (task.completed ? 1 : 0)
+                      });
+                    });
+                    return Array.from(categoryMap.entries()).map(([name, data]) => ({
+                      name,
+                      completed: data.completed,
+                      pending: data.total - data.completed,
+                      color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                    }));
+                  })()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Legend />
+                    <Bar dataKey="completed">
+                      {(() => {
+                        const categoryMap = new Map<string, { total: number; completed: number }>();
+                        tasks.forEach(task => {
+                          const cat = task.category || 'Uncategorized';
+                          const current = categoryMap.get(cat) || { total: 0, completed: 0 };
+                          categoryMap.set(cat, {
+                            total: current.total + 1,
+                            completed: current.completed + (task.completed ? 1 : 0)
+                          });
+                        });
+                        return Array.from(categoryMap.entries()).map(([name, data]) => ({
+                          name,
+                          color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                        }));
+                      })().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                    <Bar dataKey="pending" fill="hsl(var(--muted))" />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart: XP by Category */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-primary" />
+                  XP Earned by Category
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <RechartsBarChart data={(() => {
+                    const categoryMap = new Map<string, number>();
+                    tasks.filter(t => t.completed).forEach(task => {
+                      const cat = task.category || 'Uncategorized';
+                      categoryMap.set(cat, (categoryMap.get(cat) || 0) + (task.points || 1));
+                    });
+                    return Array.from(categoryMap.entries()).map(([name, points]) => ({
+                      name,
+                      points,
+                      color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                    }));
+                  })()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Bar dataKey="points">
+                      {(() => {
+                        const categoryMap = new Map<string, number>();
+                        tasks.filter(t => t.completed).forEach(task => {
+                          const cat = task.category || 'Uncategorized';
+                          categoryMap.set(cat, (categoryMap.get(cat) || 0) + (task.points || 1));
+                        });
+                        return Array.from(categoryMap.entries()).map(([name, points]) => ({
+                          name,
+                          color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+                        }));
+                      })().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart: Cumulative Progress */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  Cumulative Progress
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={(() => {
+                    const completedTasks = tasks
+                      .filter(t => t.completed && t.completed_at)
+                      .sort((a, b) => new Date(a.completed_at!).getTime() - new Date(b.completed_at!).getTime());
+                    let cumulative = 0;
+                    let cumulativePoints = 0;
+                    const data = completedTasks.map(task => {
+                      cumulative++;
+                      cumulativePoints += task.points || 1;
+                      return {
+                        date: format(parseISO(task.completed_at!), 'MMM dd'),
+                        tasks: cumulative,
+                        points: cumulativePoints
+                      };
+                    });
+                    return data.filter((_, index, arr) => index === 0 || index === arr.length - 1 || index % Math.ceil(arr.length / 10) === 0);
+                  })()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="tasks" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    <Line type="monotone" dataKey="points" stroke="hsl(var(--secondary))" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Chart: Task Velocity */}
+              <div className="rounded-xl bg-card border border-border p-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  Task Velocity (14 Days)
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={(() => {
+                    const last14Days = Array.from({ length: 14 }, (_, i) => {
+                      const daysAgo = 13 - i;
+                      const { start, end } = getCustomDayBoundaries(daysAgo);
+                      const completed = tasks.filter(t => {
+                        if (!t.completed || !t.completed_at) return false;
+                        const completedDate = parseISO(t.completed_at);
+                        return isWithinInterval(completedDate, { start, end });
+                      }).length;
+                      return {
+                        date: format(start, 'MMM dd'),
+                        completed,
+                        avg: 0
+                      };
+                    });
+                    return last14Days.map((day, index) => {
+                      const windowSize = Math.min(3, index + 1);
+                      const avg = last14Days
+                        .slice(Math.max(0, index - windowSize + 1), index + 1)
+                        .reduce((sum, d) => sum + d.completed, 0) / windowSize;
+                      return { ...day, avg: Math.round(avg * 10) / 10 };
+                    });
+                  })()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="completed" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    <Line type="monotone" dataKey="avg" stroke="hsl(var(--secondary))" strokeWidth={2} strokeDasharray="5 5" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
