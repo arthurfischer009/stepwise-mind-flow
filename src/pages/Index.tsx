@@ -9,6 +9,7 @@ import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
+import { MorningRitual } from "@/components/MorningRitual";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
@@ -75,6 +76,9 @@ const Index = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
+  const [showMorningRitual, setShowMorningRitual] = useState(false);
+  const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
+  const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const { toast } = useToast();
 
   // Check authentication
@@ -124,8 +128,73 @@ const Index = () => {
     if (user) {
       loadTasks();
       loadAchievements();
+      checkDailyLogin();
     }
   }, [user]);
+
+  const checkDailyLogin = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get or create user stats
+      let { data: stats, error: fetchError } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      // Calculate yesterday's completed tasks
+      const { start: yesterdayStart, end: yesterdayEnd } = getCustomDayBoundaries(1);
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('completed', true);
+      
+      const yesterdayCount = (tasksData || []).filter((t) => {
+        if (!t.completed_at) return false;
+        const completedDate = parseISO(t.completed_at);
+        return isWithinInterval(completedDate, { start: yesterdayStart, end: yesterdayEnd });
+      }).length;
+      
+      setYesterdayCompleted(yesterdayCount);
+
+      if (!stats) {
+        // Create new user stats with daily login
+        await supabase
+          .from('user_stats')
+          .insert({
+            user_id: user?.id,
+            last_login_date: today,
+            login_streak: 1,
+            longest_streak: 1,
+            total_logins: 1,
+          });
+        
+        setShowMorningRitual(true);
+        return;
+      }
+
+      // Check if it's a new day
+      if (stats.last_login_date !== today) {
+        // Update login stats
+        await supabase
+          .from('user_stats')
+          .update({
+            last_login_date: today,
+            total_logins: (stats.total_logins || 0) + 1,
+          })
+          .eq('user_id', user?.id);
+
+        setShowMorningRitual(true);
+      }
+    } catch (error) {
+      console.error('Error checking daily login:', error);
+    }
+  };
 
   const loadAchievements = async () => {
     try {
@@ -606,6 +675,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <MorningRitual
+        open={showMorningRitual}
+        onOpenChange={setShowMorningRitual}
+        currentStreak={currentStreak}
+        todayTasksCount={tasks.filter(t => !t.completed).length}
+        yesterdayCompleted={yesterdayCompleted}
+        level={level}
+        dailyLoginBonus={dailyLoginBonus}
+      />
+      
       <div className="container max-w-6xl mx-auto px-4 py-4">
         <header className="text-center mb-4">
           <div className="flex items-center justify-center gap-3 mb-2">
