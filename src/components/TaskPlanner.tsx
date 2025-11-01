@@ -30,11 +30,12 @@ interface TaskPlannerProps {
   onDeleteTask: (id: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
   onUpdatePoints: (id: string, points: number) => void;
+  onUpdateTask: (id: string, title: string) => void;
   categoryColors: { [key: string]: string };
   categories?: Category[];
 }
 
-export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, categoryColors, categories = [] }: TaskPlannerProps) => {
+export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, onUpdateTask, categoryColors, categories = [] }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
 
@@ -102,13 +103,14 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
         </div>
       </form>
 
-        <TaskList
-          tasks={tasks}
-          onDeleteTask={onDeleteTask}
-          onReorderTasks={onReorderTasks}
-          onUpdatePoints={onUpdatePoints}
-          categoryColors={categoryColors}
-        />
+      <TaskList 
+        tasks={tasks}
+        onDeleteTask={onDeleteTask}
+        onReorderTasks={onReorderTasks}
+        onUpdatePoints={onUpdatePoints}
+        onUpdateTask={onUpdateTask}
+        categoryColors={categoryColors}
+      />
     </div>
   );
 };

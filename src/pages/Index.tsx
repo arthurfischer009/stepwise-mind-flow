@@ -132,6 +132,46 @@ const Index = () => {
     .reduce((sum, t) => sum + (t.points || 1), 0);
   const currentTaskColor = currentTask?.category ? categoryColors[currentTask.category] : undefined;
 
+  // Calculate streak (consecutive days with completed tasks)
+  const calculateStreak = () => {
+    const completedTasks = tasks
+      .filter((t) => t.completed && t.completed_at)
+      .sort((a, b) => {
+        const dateA = parseISO(a.completed_at!);
+        const dateB = parseISO(b.completed_at!);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+    if (completedTasks.length === 0) return 0;
+
+    let streak = 0;
+    let currentDate = new Date();
+    
+    // Check each previous day
+    for (let dayOffset = 0; dayOffset < 365; dayOffset++) {
+      const { start: dayStart, end: dayEnd } = getCustomDayBoundaries(-dayOffset);
+      
+      const hasCompletedTaskOnDay = completedTasks.some((t) => {
+        const completedDate = parseISO(t.completed_at!);
+        return isWithinInterval(completedDate, { start: dayStart, end: dayEnd });
+      });
+
+      if (hasCompletedTaskOnDay) {
+        streak++;
+      } else {
+        // If today (dayOffset === 0) has no completed tasks, we might still be within today
+        // so we don't break the streak yet
+        if (dayOffset > 0) {
+          break;
+        }
+      }
+    }
+
+    return streak;
+  };
+
+  const currentStreak = calculateStreak();
+
   const handleAddTask = async (title: string, category?: string) => {
     try {
       if (!user) {
@@ -211,6 +251,8 @@ const Index = () => {
     if (!currentTask) return;
 
     try {
+      const completedTaskRef = { ...currentTask };
+      
       const { error } = await supabase
         .from('tasks')
         .update({ completed: true, completed_at: new Date().toISOString() })
@@ -226,12 +268,49 @@ const Index = () => {
       toast({
         title: "Level Complete! 🎉",
         description: `You've reached Level ${level + 1}`,
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleUndoComplete(completedTaskRef.id)}
+          >
+            Undo
+          </Button>
+        ),
       });
     } catch (error: any) {
       console.error('Error completing task:', error);
       toast({
         title: "Error",
         description: "Failed to complete task",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUndoComplete = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: false, completed_at: null })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, completed: false, completed_at: undefined } : t))
+      );
+      setLevel((prev) => prev - 1);
+      
+      toast({
+        title: "Task restored",
+        description: "Task marked as incomplete",
+      });
+    } catch (error: any) {
+      console.error('Error undoing complete:', error);
+      toast({
+        title: "Error",
+        description: "Failed to undo",
         variant: "destructive",
       });
     }
@@ -300,6 +379,33 @@ const Index = () => {
       toast({
         title: "Error",
         description: "Failed to update points",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateTask = async (id: string, title: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ title })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, title } : t))
+      );
+      
+      toast({
+        title: "Task updated",
+        description: "Task title has been updated",
+      });
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
         variant: "destructive",
       });
     }
@@ -400,6 +506,7 @@ const Index = () => {
               completedToday={completedToday}
               totalTasks={tasks.length}
               totalPoints={totalPoints}
+              currentStreak={currentStreak}
             />
             <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
@@ -420,6 +527,7 @@ const Index = () => {
               onDeleteTask={handleDeleteTask}
               onReorderTasks={handleReorderTasks}
               onUpdatePoints={handleUpdatePoints}
+              onUpdateTask={handleUpdateTask}
               categoryColors={categoryColors}
               categories={categories}
             />

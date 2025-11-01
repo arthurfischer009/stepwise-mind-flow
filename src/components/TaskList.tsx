@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Trash2, GripVertical, Clock } from "lucide-react";
+import { Trash2, GripVertical, Clock, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addMinutes } from "date-fns";
 
@@ -16,12 +16,15 @@ interface TaskListProps {
   onDeleteTask: (id: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
   onUpdatePoints: (id: string, points: number) => void;
+  onUpdateTask: (id: string, title: string) => void;
   categoryColors: { [key: string]: string };
 }
 
-export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, categoryColors }: TaskListProps) => {
+export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, onUpdateTask, categoryColors }: TaskListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [editingPoints, setEditingPoints] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState<string>("");
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentY, setTouchCurrentY] = useState<number | null>(null);
@@ -240,7 +243,46 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                 {index + 1}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
+                {editingTitle === task.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editingTitleValue}
+                      onChange={(e) => setEditingTitleValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onUpdateTask(task.id, editingTitleValue);
+                          setEditingTitle(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingTitle(null);
+                        }
+                      }}
+                      className="flex-1 px-2 py-1 text-sm bg-background border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        onUpdateTask(task.id, editingTitleValue);
+                        setEditingTitle(null);
+                      }}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Check className="w-3 h-3 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingTitle(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="w-3 h-3 text-red-600" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
+                )}
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     <Clock className="w-3 h-3" />
@@ -256,7 +298,20 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
+                {editingTitle !== task.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingTitle(task.id);
+                      setEditingTitleValue(task.title);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                )}
                 {editingPoints === task.id ? (
                   <input
                     type="number"
