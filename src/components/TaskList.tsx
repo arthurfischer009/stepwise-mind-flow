@@ -26,7 +26,10 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchCurrentY, setTouchCurrentY] = useState<number | null>(null);
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const touchElementRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollIntervalRef = useRef<number | null>(null);
   const pendingTasks = (draggedIndex !== null ? localTasks : tasks.filter((t) => !t.completed));
 
   if (tasks.filter((t) => !t.completed).length === 0) return null;
@@ -76,6 +79,11 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     setLocalTasks(tasks.filter((t) => !t.completed));
     setIsDraggingTouch(true);
     touchElementRef.current = e.currentTarget as HTMLDivElement;
+    
+    // Haptic feedback on supported devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -85,6 +93,34 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     const touch = e.touches[0];
     setTouchCurrentY(touch.clientY);
 
+    // Auto-scroll when dragging near edges
+    if (containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const scrollThreshold = 80;
+      const scrollSpeed = 10;
+
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+
+      if (touch.clientY < containerRect.top + scrollThreshold) {
+        // Scroll up
+        autoScrollIntervalRef.current = window.setInterval(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollTop -= scrollSpeed;
+          }
+        }, 16);
+      } else if (touch.clientY > containerRect.bottom - scrollThreshold) {
+        // Scroll down
+        autoScrollIntervalRef.current = window.setInterval(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollTop += scrollSpeed;
+          }
+        }, 16);
+      }
+    }
+
     // Find which element we're hovering over
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
     const taskElement = elements.find(el => 
@@ -93,6 +129,8 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
 
     if (taskElement) {
       const hoveredIndex = parseInt(taskElement.getAttribute('data-index') || '-1');
+      setHoverIndex(hoveredIndex);
+      
       if (hoveredIndex !== -1 && hoveredIndex !== draggedIndex) {
         const newTasks = [...localTasks];
         const draggedTask = newTasks[draggedIndex];
@@ -101,20 +139,39 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
         
         setLocalTasks(newTasks);
         setDraggedIndex(hoveredIndex);
+        
+        // Subtle haptic feedback when crossing items
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
       }
+    } else {
+      setHoverIndex(null);
     }
   };
 
   const handleTouchEnd = () => {
+    // Clear auto-scroll interval
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+
     if (draggedIndex !== null && isDraggingTouch) {
       const completedTasks = tasks.filter((t) => t.completed);
       onReorderTasks([...localTasks, ...completedTasks]);
+      
+      // Haptic feedback on drop
+      if ('vibrate' in navigator) {
+        navigator.vibrate(30);
+      }
     }
     setDraggedIndex(null);
     setLocalTasks([]);
     setTouchStartY(null);
     setTouchCurrentY(null);
     setIsDraggingTouch(false);
+    setHoverIndex(null);
     touchElementRef.current = null;
   };
 
@@ -123,7 +180,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Upcoming Levels ({pendingTasks.length})
       </h3>
-      <div className="space-y-1.5">
+      <div ref={containerRef} className="space-y-1.5 max-h-[60vh] overflow-y-auto">
         {pendingTasks.map((task, index) => {
           const categoryColor = task.category ? categoryColors[task.category] : undefined;
           const startTime = getTaskStartTime(index);
@@ -131,33 +188,48 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
           const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
             ? touchCurrentY - touchStartY 
             : 0;
+          const isHovered = hoverIndex === index && !isBeingDragged;
           
           return (
-            <div
-              key={task.id}
-              data-index={index}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              onTouchStart={(e) => handleTouchStart(e, index)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
-              style={{
-                borderColor: categoryColor || 'hsl(var(--border))',
-                backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
-                opacity: isBeingDragged ? 0.8 : 1,
-                transform: isBeingDragged && isDraggingTouch
-                  ? `translateY(${touchOffset}px) scale(1.05)` 
-                  : isBeingDragged 
-                  ? 'scale(1.02)' 
-                  : 'scale(1)',
-                zIndex: isBeingDragged ? 50 : 1,
-                position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
-                touchAction: 'none'
-              }}
-            >
+            <div key={task.id} className="relative">
+              {/* Visual placeholder line */}
+              {isHovered && isDraggingTouch && (
+                <div 
+                  className="absolute -top-1 left-0 right-0 h-0.5 rounded-full animate-pulse"
+                  style={{ 
+                    backgroundColor: categoryColor || 'hsl(var(--primary))',
+                    boxShadow: `0 0 8px ${categoryColor || 'hsl(var(--primary))'}` 
+                  }}
+                />
+              )}
+              
+              <div
+                data-index={index}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
+                style={{
+                  borderColor: categoryColor || 'hsl(var(--border))',
+                  backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
+                  opacity: isBeingDragged ? 0.8 : 1,
+                  transform: isBeingDragged && isDraggingTouch
+                    ? `translateY(${touchOffset}px) scale(1.05)` 
+                    : isBeingDragged 
+                    ? 'scale(1.02)' 
+                    : 'scale(1)',
+                  zIndex: isBeingDragged ? 50 : 1,
+                  position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
+                  touchAction: 'none',
+                  boxShadow: isBeingDragged && isDraggingTouch 
+                    ? `0 8px 24px ${categoryColor ? `${categoryColor}40` : 'rgba(0,0,0,0.15)'}`
+                    : 'none'
+                }}
+              >
               <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <div 
                 className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
@@ -224,6 +296,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>
+              </div>
               </div>
             </div>
           );
