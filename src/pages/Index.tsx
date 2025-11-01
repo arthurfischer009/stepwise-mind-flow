@@ -636,8 +636,17 @@ const Index = () => {
               size="sm"
               className="gap-2"
             >
-              <BarChart3 className="w-4 h-4" />
+              <Target className="w-4 h-4" />
               Categories
+            </Button>
+            <Button
+              onClick={() => navigate('/analytics')}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
             </Button>
             <Button
               onClick={async () => {
