@@ -547,6 +547,28 @@ const Index = () => {
     }
   };
 
+  const handleUpdatePriority = async (id: string, isPriority: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ is_priority: isPriority })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, is_priority: isPriority } : t))
+      );
+    } catch (error: any) {
+      console.error('Error updating priority:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update priority",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">

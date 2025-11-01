@@ -114,6 +114,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           id: string
+          is_priority: boolean | null
           points: number | null
           sort_order: number | null
           title: string
@@ -126,6 +127,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          is_priority?: boolean | null
           points?: number | null
           sort_order?: number | null
           title: string
@@ -138,6 +140,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          is_priority?: boolean | null
           points?: number | null
           sort_order?: number | null
           title?: string
