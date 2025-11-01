@@ -4,6 +4,8 @@ import { CurrentLevel } from "@/components/CurrentLevel";
 import { TaskPlanner } from "@/components/TaskPlanner";
 import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
+import { AchievementsPanel } from "@/components/AchievementsPanel";
+import { AchievementNotification } from "@/components/AchievementNotification";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network, BarChart3, LogOut } from "lucide-react";
@@ -11,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { isWithinInterval, parseISO } from "date-fns";
 import { getCustomDayBoundaries } from "@/lib/dateUtils";
+import { ACHIEVEMENTS, Achievement, AchievementCheckData } from "@/lib/achievements";
+import { triggerLevelUpConfetti, triggerAchievementConfetti } from "@/lib/confetti";
 
 interface Task {
   id: string;
@@ -33,6 +37,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+  const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
   const { toast } = useToast();
 
   // Check authentication
@@ -81,8 +87,24 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       loadTasks();
+      loadAchievements();
     }
   }, [user]);
+
+  const loadAchievements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('achievements')
+        .select('achievement_key')
+        .order('unlocked_at', { ascending: false });
+
+      if (error) throw error;
+
+      setUnlockedAchievements(data?.map(a => a.achievement_key) || []);
+    } catch (error: any) {
+      console.error('Error loading achievements:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -260,10 +282,18 @@ const Index = () => {
 
       if (error) throw error;
 
-      setTasks((prev) =>
-        prev.map((t) => (t.id === currentTask.id ? { ...t, completed: true, completed_at: new Date().toISOString() } : t))
+      const updatedTasks = tasks.map((t) => 
+        t.id === currentTask.id ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
       );
+      
+      setTasks(updatedTasks);
       setLevel((prev) => prev + 1);
+      
+      // Trigger level-up confetti
+      triggerLevelUpConfetti();
+      
+      // Check for new achievements
+      await checkAndUnlockAchievements(updatedTasks);
       
       toast({
         title: "Level Complete! 🎉",
@@ -286,6 +316,58 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const checkAndUnlockAchievements = async (updatedTasks: Task[]) => {
+    const totalCompleted = updatedTasks.filter(t => t.completed).length;
+    const totalPoints = updatedTasks
+      .filter((t) => t.completed)
+      .reduce((sum, t) => sum + (t.points || 1), 0);
+    
+    const { start: todayStart, end: todayEnd } = getCustomDayBoundaries(0);
+    const completedToday = updatedTasks.filter((t) => {
+      if (!t.completed || !t.completed_at) return false;
+      const completedDate = parseISO(t.completed_at);
+      return isWithinInterval(completedDate, { start: todayStart, end: todayEnd });
+    }).length;
+
+    const checkData: AchievementCheckData = {
+      totalCompleted,
+      currentStreak,
+      totalPoints,
+      completedToday,
+      categories: [...new Set(updatedTasks.map(t => t.category).filter(Boolean) as string[])],
+    };
+
+    const newlyUnlocked: Achievement[] = [];
+
+    for (const achievement of ACHIEVEMENTS) {
+      if (!unlockedAchievements.includes(achievement.key) && achievement.checkUnlock(checkData)) {
+        try {
+          const { error } = await supabase
+            .from('achievements')
+            .insert({
+              achievement_key: achievement.key,
+              user_id: user?.id,
+            });
+
+          if (!error) {
+            newlyUnlocked.push(achievement);
+            setUnlockedAchievements(prev => [...prev, achievement.key]);
+          }
+        } catch (error) {
+          console.error('Error unlocking achievement:', error);
+        }
+      }
+    }
+
+    // Show achievement notifications with delay between each
+    newlyUnlocked.forEach((achievement, index) => {
+      setTimeout(() => {
+        setNewAchievement(achievement);
+        triggerAchievementConfetti(achievement.color);
+      }, index * 3000);
+    });
   };
 
   const handleUndoComplete = async (taskId: string) => {
@@ -457,6 +539,7 @@ const Index = () => {
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
               Focus Quest
             </h1>
+            <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <Button
               onClick={() => navigate('/mindmap')}
               variant="outline"
@@ -542,6 +625,13 @@ const Index = () => {
           categoryColors={categoryColors}
         />
       </div>
+      
+      {newAchievement && (
+        <AchievementNotification
+          achievement={newAchievement}
+          onClose={() => setNewAchievement(null)}
+        />
+      )}
     </div>
   );
 };
