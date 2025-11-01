@@ -8,6 +8,7 @@ import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
+import { Timeline } from "@/components/Timeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2 } from "lucide-react";
@@ -808,56 +809,12 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <div className="rounded-2xl bg-card border border-border p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Recent Activity
-              </h3>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {tasks
-                  .filter(t => t.completed && t.completed_at)
-                  .sort((a, b) => {
-                    const dateA = parseISO(a.completed_at!);
-                    const dateB = parseISO(b.completed_at!);
-                    return dateB.getTime() - dateA.getTime();
-                  })
-                  .slice(0, 5)
-                  .map(task => {
-                    const categoryColor = task.category ? categoryColors[task.category] : undefined;
-                    return (
-                      <div 
-                        key={task.id}
-                        className="flex items-center gap-3 p-2 rounded bg-muted/50"
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate">{task.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(parseISO(task.completed_at!), 'MMM d, HH:mm')}
-                          </div>
-                        </div>
-                        {task.category && categoryColor && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs flex-shrink-0"
-                            style={{ 
-                              borderColor: categoryColor,
-                              color: categoryColor 
-                            }}
-                          >
-                            {task.category}
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
-                {tasks.filter(t => t.completed).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Complete your first task to see activity!
-                  </p>
-                )}
-              </div>
+            {/* Timeline - Full width */}
+            <div className="lg:col-span-2">
+              <Timeline 
+                tasks={tasks}
+                categoryColors={categoryColors}
+              />
             </div>
           </div>
         </div>
