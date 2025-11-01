@@ -65,6 +65,54 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_challenges: {
+        Row: {
+          bonus_xp: number
+          challenge_date: string
+          challenge_description: string
+          challenge_title: string
+          challenge_type: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_count: number
+          id: string
+          target_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_xp?: number
+          challenge_date?: string
+          challenge_description: string
+          challenge_title: string
+          challenge_type: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          target_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_xp?: number
+          challenge_date?: string
+          challenge_description?: string
+          challenge_title?: string
+          challenge_type?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          target_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_relationships: {
         Row: {
           created_at: string | null
@@ -146,6 +194,42 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          created_at: string
+          id: string
+          last_login_date: string
+          login_streak: number
+          longest_streak: number
+          streak_bonus_claimed_today: boolean
+          total_logins: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_login_date?: string
+          login_streak?: number
+          longest_streak?: number
+          streak_bonus_claimed_today?: boolean
+          total_logins?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_login_date?: string
+          login_streak?: number
+          longest_streak?: number
+          streak_bonus_claimed_today?: boolean
+          total_logins?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
