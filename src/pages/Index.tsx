@@ -593,6 +593,7 @@ const Index = () => {
               onAddTask={handleAddTask}
               onUpdatePriority={handleUpdatePriority}
               categoryColors={categoryColors}
+              categories={categories}
             />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Star, Clock, Target } from "lucide-react";
+import { Calendar, Plus, Star, Clock, Target, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { playClick, playPowerUp } from "@/lib/sounds";
 import { format } from "date-fns";
 
@@ -25,11 +32,17 @@ interface Task {
   is_priority?: boolean;
 }
 
+interface Category {
+  name: string;
+  color: string;
+}
+
 interface DailyPlanningDialogProps {
   tasks: Task[];
   onAddTask: (title: string, category?: string) => void;
   onUpdatePriority: (taskId: string, isPriority: boolean) => void;
   categoryColors: { [key: string]: string };
+  categories: Category[];
 }
 
 export const DailyPlanningDialog = ({
@@ -37,10 +50,15 @@ export const DailyPlanningDialog = ({
   onAddTask,
   onUpdatePriority,
   categoryColors,
+  categories,
 }: DailyPlanningDialogProps) => {
   const [open, setOpen] = useState(false);
   const [dailyGoal, setDailyGoal] = useState("");
-  const [quickTasks, setQuickTasks] = useState<string[]>(["", "", ""]);
+  const [quickTasks, setQuickTasks] = useState<Array<{ title: string; category?: string }>>([
+    { title: "", category: undefined },
+    { title: "", category: undefined },
+    { title: "", category: undefined },
+  ]);
   const [priorityTasks, setPriorityTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -66,8 +84,8 @@ export const DailyPlanningDialog = ({
 
     // Add quick tasks
     quickTasks.forEach(task => {
-      if (task.trim()) {
-        onAddTask(task.trim());
+      if (task.title.trim()) {
+        onAddTask(task.title.trim(), task.category);
       }
     });
 
@@ -78,7 +96,11 @@ export const DailyPlanningDialog = ({
 
     playPowerUp();
     setOpen(false);
-    setQuickTasks(["", "", ""]);
+    setQuickTasks([
+      { title: "", category: undefined },
+      { title: "", category: undefined },
+      { title: "", category: undefined },
+    ]);
   };
 
   const togglePriority = (taskId: string) => {
@@ -96,14 +118,18 @@ export const DailyPlanningDialog = ({
     playClick();
   };
 
-  const updateQuickTask = (index: number, value: string) => {
+  const updateQuickTask = (index: number, field: 'title' | 'category', value: string | undefined) => {
     const updated = [...quickTasks];
-    updated[index] = value;
+    if (field === 'title') {
+      updated[index].title = value as string;
+    } else {
+      updated[index].category = value;
+    }
     setQuickTasks(updated);
   };
 
   const addMoreQuickTask = () => {
-    setQuickTasks([...quickTasks, ""]);
+    setQuickTasks([...quickTasks, { title: "", category: undefined }]);
   };
 
   return (
@@ -155,15 +181,48 @@ export const DailyPlanningDialog = ({
               <Plus className="w-4 h-4 text-primary" />
               Quick Add Tasks
             </label>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {quickTasks.map((task, index) => (
-                <Input
-                  key={index}
-                  value={task}
-                  onChange={(e) => updateQuickTask(index, e.target.value)}
-                  placeholder={`Task ${index + 1}...`}
-                  className="bg-card"
-                />
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={task.title}
+                    onChange={(e) => updateQuickTask(index, 'title', e.target.value)}
+                    placeholder={`Task ${index + 1}...`}
+                    className="flex-1 bg-card"
+                  />
+                  <Select
+                    value={task.category || "none"}
+                    onValueChange={(value) => 
+                      updateQuickTask(index, 'category', value === "none" ? undefined : value)
+                    }
+                  >
+                    <SelectTrigger className="w-40 bg-card">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-3 h-3" />
+                        <SelectValue placeholder="Category" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border border-border shadow-lg z-[100]">
+                      <SelectItem value="none" className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-muted" />
+                          No category
+                        </div>
+                      </SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.name} value={cat.name} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: cat.color }}
+                            />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               ))}
               <Button
                 variant="outline"
@@ -246,7 +305,7 @@ export const DailyPlanningDialog = ({
               <div>
                 <span className="text-muted-foreground">Quick Adds:</span>
                 <span className="ml-2 font-bold">
-                  {quickTasks.filter(t => t.trim()).length}
+                  {quickTasks.filter(t => t.title.trim()).length}
                 </span>
               </div>
             </div>
