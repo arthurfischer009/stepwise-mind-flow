@@ -7,6 +7,7 @@ import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
+import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network, BarChart3, LogOut } from "lucide-react";
@@ -35,6 +36,7 @@ interface Task {
   created_at?: string;
   sort_order?: number;
   points?: number;
+  is_priority?: boolean;
 }
 
 const Index = () => {
@@ -564,6 +566,12 @@ const Index = () => {
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
               Focus Quest
             </h1>
+            <DailyPlanningDialog
+              tasks={tasks}
+              onAddTask={handleAddTask}
+              onUpdatePriority={handleUpdatePriority}
+              categoryColors={categoryColors}
+            />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
             <Button

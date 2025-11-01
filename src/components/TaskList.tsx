@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Trash2, GripVertical, Clock, Pencil, Check, X } from "lucide-react";
+import { Trash2, GripVertical, Clock, Pencil, Check, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addMinutes } from "date-fns";
 
@@ -9,6 +9,7 @@ interface Task {
   category?: string;
   completed: boolean;
   points?: number;
+  is_priority?: boolean;
 }
 
 interface TaskListProps {
@@ -242,6 +243,9 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
               >
                 {index + 1}
               </div>
+              {task.is_priority && (
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+              )}
               <div className="flex-1 min-w-0">
                 {editingTitle === task.id ? (
                   <div className="flex items-center gap-1">
