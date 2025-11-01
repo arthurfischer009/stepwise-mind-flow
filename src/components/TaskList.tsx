@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Trash2, GripVertical, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addMinutes } from "date-fns";
@@ -23,6 +23,10 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [editingPoints, setEditingPoints] = useState<string | null>(null);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchCurrentY, setTouchCurrentY] = useState<number | null>(null);
+  const [isDraggingTouch, setIsDraggingTouch] = useState(false);
+  const touchElementRef = useRef<HTMLDivElement | null>(null);
   const pendingTasks = (draggedIndex !== null ? localTasks : tasks.filter((t) => !t.completed));
 
   if (tasks.filter((t) => !t.completed).length === 0) return null;
@@ -63,6 +67,57 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     setLocalTasks([]);
   };
 
+  // Touch handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    const touch = e.touches[0];
+    setTouchStartY(touch.clientY);
+    setTouchCurrentY(touch.clientY);
+    setDraggedIndex(index);
+    setLocalTasks(tasks.filter((t) => !t.completed));
+    setIsDraggingTouch(true);
+    touchElementRef.current = e.currentTarget as HTMLDivElement;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (draggedIndex === null || !isDraggingTouch) return;
+    
+    e.preventDefault(); // Prevent scrolling while dragging
+    const touch = e.touches[0];
+    setTouchCurrentY(touch.clientY);
+
+    // Find which element we're hovering over
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    const taskElement = elements.find(el => 
+      el.classList.contains('task-item') && el !== touchElementRef.current
+    );
+
+    if (taskElement) {
+      const hoveredIndex = parseInt(taskElement.getAttribute('data-index') || '-1');
+      if (hoveredIndex !== -1 && hoveredIndex !== draggedIndex) {
+        const newTasks = [...localTasks];
+        const draggedTask = newTasks[draggedIndex];
+        newTasks.splice(draggedIndex, 1);
+        newTasks.splice(hoveredIndex, 0, draggedTask);
+        
+        setLocalTasks(newTasks);
+        setDraggedIndex(hoveredIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggedIndex !== null && isDraggingTouch) {
+      const completedTasks = tasks.filter((t) => t.completed);
+      onReorderTasks([...localTasks, ...completedTasks]);
+    }
+    setDraggedIndex(null);
+    setLocalTasks([]);
+    setTouchStartY(null);
+    setTouchCurrentY(null);
+    setIsDraggingTouch(false);
+    touchElementRef.current = null;
+  };
+
   return (
     <div className="space-y-1.5">
       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -72,20 +127,35 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
         {pendingTasks.map((task, index) => {
           const categoryColor = task.category ? categoryColors[task.category] : undefined;
           const startTime = getTaskStartTime(index);
+          const isBeingDragged = draggedIndex === index;
+          const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
+            ? touchCurrentY - touchStartY 
+            : 0;
           
           return (
             <div
               key={task.id}
+              data-index={index}
               draggable
               onDragStart={() => handleDragStart(index)}
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
-              className="group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
+              onTouchStart={(e) => handleTouchStart(e, index)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
               style={{
                 borderColor: categoryColor || 'hsl(var(--border))',
                 backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
-                opacity: draggedIndex === index ? 0.5 : 1,
-                transform: draggedIndex === index ? 'scale(1.02)' : 'scale(1)'
+                opacity: isBeingDragged ? 0.8 : 1,
+                transform: isBeingDragged && isDraggingTouch
+                  ? `translateY(${touchOffset}px) scale(1.05)` 
+                  : isBeingDragged 
+                  ? 'scale(1.02)' 
+                  : 'scale(1)',
+                zIndex: isBeingDragged ? 50 : 1,
+                position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
+                touchAction: 'none'
               }}
             >
               <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
