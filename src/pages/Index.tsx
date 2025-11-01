@@ -11,7 +11,7 @@ import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2 } from "lucide-react";
+import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -682,7 +682,7 @@ const Index = () => {
             Your Progress Analytics
           </h2>
           
-          <div className="grid lg:grid-cols-2 gap-4">
+          <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Completion Rate Card */}
             <div className="rounded-2xl bg-card border border-border p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -729,8 +729,68 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Category Breakdown */}
+            {/* Level Progress */}
             <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-primary" />
+                Level Progress
+              </h3>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary mb-2">
+                    {level}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Current Level</div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-500">
+                      {totalPoints}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Total XP</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-500">
+                      {currentStreak}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Day Streak</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Today's Progress */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                Today's Progress
+              </h3>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-primary mb-2">
+                    {completedToday}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Tasks Completed</div>
+                </div>
+                
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Daily Goal</span>
+                    <span className="text-sm font-bold">{completedToday}/5</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((completedToday / 5) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="rounded-2xl bg-card border border-border p-6 xl:col-span-2">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-primary" />
                 Category Breakdown
@@ -778,39 +838,114 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Points & Level Progress */}
+            {/* Weekly Overview */}
             <div className="rounded-2xl bg-card border border-border p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                Level Progress
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+                Weekly Overview
+              </h3>
+              <div className="space-y-3">
+                {[0, 1, 2, 3, 4, 5, 6].map(dayOffset => {
+                  const { start, end } = getCustomDayBoundaries(dayOffset);
+                  const completedOnDay = tasks.filter((t) => {
+                    if (!t.completed || !t.completed_at) return false;
+                    const completedDate = parseISO(t.completed_at);
+                    return isWithinInterval(completedDate, { start, end });
+                  }).length;
+
+                  return (
+                    <div key={dayOffset} className="flex items-center gap-3">
+                      <div className="w-16 text-sm text-muted-foreground">
+                        {dayOffset === 0 ? 'Today' : dayOffset === 1 ? 'Yesterday' : format(start, 'EEE')}
+                      </div>
+                      <div className="flex-1 bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min((completedOnDay / 10) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <div className="w-8 text-sm font-bold text-right">{completedOnDay}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Priority Tasks */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary" />
+                Priority Focus
               </h3>
               <div className="space-y-4">
                 <div className="text-center">
-                  <div className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary mb-2">
-                    {level}
+                  <div className="text-4xl font-bold text-yellow-500 mb-2">
+                    {tasks.filter(t => t.is_priority && !t.completed).length}
                   </div>
-                  <div className="text-sm text-muted-foreground">Current Level</div>
+                  <div className="text-sm text-muted-foreground">Active Priorities</div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-500">
-                      {totalPoints}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">Total XP</div>
+                <div className="pt-4 border-t border-border space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Completed Today</span>
+                    <span className="font-bold">
+                      {tasks.filter(t => t.is_priority && t.completed && t.completed_at && 
+                        isWithinInterval(parseISO(t.completed_at), { start: todayStart, end: todayEnd })
+                      ).length}
+                    </span>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-500">
-                      {currentStreak}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">Day Streak</div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Completed</span>
+                    <span className="font-bold">
+                      {tasks.filter(t => t.is_priority && t.completed).length}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Best Category */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-primary" />
+                Top Category
+              </h3>
+              {(() => {
+                const categoryStats = categories.map(cat => ({
+                  name: cat.name,
+                  color: cat.color,
+                  completed: tasks.filter(t => t.category === cat.name && t.completed).length
+                })).sort((a, b) => b.completed - a.completed);
+                
+                const topCategory = categoryStats[0];
+                
+                return topCategory ? (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <div 
+                        className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center"
+                        style={{ backgroundColor: topCategory.color + '20' }}
+                      >
+                        <div 
+                          className="w-12 h-12 rounded-full"
+                          style={{ backgroundColor: topCategory.color }}
+                        />
+                      </div>
+                      <div className="text-xl font-bold mb-1">{topCategory.name}</div>
+                      <div className="text-3xl font-bold text-primary">{topCategory.completed}</div>
+                      <div className="text-sm text-muted-foreground mt-1">Tasks Completed</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    Complete tasks to see your top category
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Timeline - Full width */}
-            <div className="lg:col-span-2">
+            <div className="xl:col-span-3 lg:col-span-2">
               <Timeline 
                 tasks={tasks}
                 categoryColors={categoryColors}
