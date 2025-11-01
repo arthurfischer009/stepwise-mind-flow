@@ -10,10 +10,11 @@ import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network, BarChart3, LogOut } from "lucide-react";
+import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
-import { isWithinInterval, parseISO } from "date-fns";
+import { isWithinInterval, parseISO, format } from "date-fns";
 import { getCustomDayBoundaries } from "@/lib/dateUtils";
 import { ACHIEVEMENTS, Achievement, AchievementCheckData } from "@/lib/achievements";
 import { triggerLevelUpConfetti, triggerAchievementConfetti } from "@/lib/confetti";
@@ -604,7 +605,7 @@ const Index = () => {
               className="gap-2"
             >
               <Network className="w-4 h-4" />
-              Network
+              Mindmap
             </Button>
             <Button
               onClick={() => navigate('/categories')}
@@ -612,16 +613,8 @@ const Index = () => {
               size="sm"
               className="gap-2"
             >
-              Categories
-            </Button>
-            <Button
-              onClick={() => navigate('/analytics')}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
               <BarChart3 className="w-4 h-4" />
-              Analytics
+              Categories
             </Button>
             <Button
               onClick={async () => {
@@ -681,6 +674,193 @@ const Index = () => {
           onAddTask={handleAddTask}
           categoryColors={categoryColors}
         />
+
+        {/* Analytics Section */}
+        <div className="mt-8 space-y-4">
+          <h2 className="text-2xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+            Your Progress Analytics
+          </h2>
+          
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Completion Rate Card */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Completion Rate
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Overall</span>
+                    <span className="text-sm font-bold">
+                      {tasks.length > 0 
+                        ? `${Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)}%`
+                        : '0%'
+                      }
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-primary to-secondary h-3 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: tasks.length > 0 
+                          ? `${(tasks.filter(t => t.completed).length / tasks.length) * 100}%`
+                          : '0%'
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-primary">
+                      {tasks.filter(t => t.completed).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-muted-foreground">
+                      {tasks.filter(t => !t.completed).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Pending</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Category Breakdown
+              </h3>
+              <div className="space-y-3">
+                {categories.length > 0 ? (
+                  categories.map(category => {
+                    const categoryTasks = tasks.filter(t => t.category === category.name);
+                    const completedInCategory = categoryTasks.filter(t => t.completed).length;
+                    const percentage = categoryTasks.length > 0 
+                      ? Math.round((completedInCategory / categoryTasks.length) * 100)
+                      : 0;
+
+                    return (
+                      <div key={category.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span className="text-sm font-medium">{category.name}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {completedInCategory}/{categoryTasks.length} ({percentage}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="h-2 rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${percentage}%`,
+                              backgroundColor: category.color
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No categories yet. Add categories to see breakdown.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Points & Level Progress */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-primary" />
+                Level Progress
+              </h3>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary mb-2">
+                    {level}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Current Level</div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-500">
+                      {totalPoints}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Total XP</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-500">
+                      {currentStreak}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Day Streak</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                Recent Activity
+              </h3>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {tasks
+                  .filter(t => t.completed && t.completed_at)
+                  .sort((a, b) => {
+                    const dateA = parseISO(a.completed_at!);
+                    const dateB = parseISO(b.completed_at!);
+                    return dateB.getTime() - dateA.getTime();
+                  })
+                  .slice(0, 5)
+                  .map(task => {
+                    const categoryColor = task.category ? categoryColors[task.category] : undefined;
+                    return (
+                      <div 
+                        key={task.id}
+                        className="flex items-center gap-3 p-2 rounded bg-muted/50"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{task.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(parseISO(task.completed_at!), 'MMM d, HH:mm')}
+                          </div>
+                        </div>
+                        {task.category && categoryColor && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs flex-shrink-0"
+                            style={{ 
+                              borderColor: categoryColor,
+                              color: categoryColor 
+                            }}
+                          >
+                            {task.category}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                {tasks.filter(t => t.completed).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Complete your first task to see activity!
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
       {newAchievement && (
