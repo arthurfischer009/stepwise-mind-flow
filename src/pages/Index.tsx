@@ -9,7 +9,7 @@ import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
-import { DailyStreak } from "@/components/DailyStreak";
+import { StreakTracker } from "@/components/StreakTracker";
 import { DailyChallenge } from "@/components/DailyChallenge";
 import { MotivationalMessage } from "@/components/MotivationalMessage";
 import { useToast } from "@/hooks/use-toast";
@@ -668,9 +668,26 @@ const Index = () => {
         </div>
 
         {/* Habit-Forming Features */}
-        <div className="grid lg:grid-cols-2 gap-4 mb-4">
-          <DailyStreak userId={user?.id || ''} onBonusClaimed={() => loadTasks()} />
-          <DailyChallenge userId={user?.id || ''} completedToday={completedToday} />
+        {/* Habit-forming components */}
+        <div className="grid lg:grid-cols-3 gap-4 mb-4">
+          <MotivationalMessage 
+            completedToday={completedToday}
+            currentStreak={currentStreak}
+            level={level}
+          />
+          <StreakTracker 
+            userId={user?.id || ''}
+            onBonusClaimed={(bonusXP) => {
+              toast({
+                title: "Bonus XP Added!",
+                description: `You earned ${bonusXP} bonus XP for your streak!`,
+              });
+            }}
+          />
+          <DailyChallenge 
+            userId={user?.id || ''}
+            completedToday={completedToday}
+          />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
