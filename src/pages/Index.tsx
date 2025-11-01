@@ -6,6 +6,7 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
+import { SoundToggle } from "@/components/SoundToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Network, BarChart3, LogOut } from "lucide-react";
@@ -15,6 +16,15 @@ import { isWithinInterval, parseISO } from "date-fns";
 import { getCustomDayBoundaries } from "@/lib/dateUtils";
 import { ACHIEVEMENTS, Achievement, AchievementCheckData } from "@/lib/achievements";
 import { triggerLevelUpConfetti, triggerAchievementConfetti } from "@/lib/confetti";
+import { 
+  playLevelComplete, 
+  playAchievementUnlock, 
+  playTaskAdded, 
+  playTaskDeleted,
+  playStreakMilestone,
+  playXPGain,
+  playError 
+} from "@/lib/sounds";
 
 interface Task {
   id: string;
@@ -259,6 +269,9 @@ const Index = () => {
         title: "Task Added",
         description: "New challenge accepted!",
       });
+      
+      // Play sound effect
+      playTaskAdded();
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast({
@@ -289,8 +302,10 @@ const Index = () => {
       setTasks(updatedTasks);
       setLevel((prev) => prev + 1);
       
-      // Trigger level-up confetti
+      // Trigger level-up effects
       triggerLevelUpConfetti();
+      playLevelComplete();
+      playXPGain();
       
       // Check for new achievements
       await checkAndUnlockAchievements(updatedTasks);
@@ -366,8 +381,14 @@ const Index = () => {
       setTimeout(() => {
         setNewAchievement(achievement);
         triggerAchievementConfetti(achievement.color);
+        playAchievementUnlock(achievement.rarity);
       }, index * 3000);
     });
+
+    // Play streak milestone sound if applicable
+    if (currentStreak > 0 && (currentStreak % 7 === 0 || currentStreak % 3 === 0)) {
+      setTimeout(() => playStreakMilestone(currentStreak), newlyUnlocked.length * 3000 + 500);
+    }
   };
 
   const handleUndoComplete = async (taskId: string) => {
@@ -388,6 +409,8 @@ const Index = () => {
         title: "Task restored",
         description: "Task marked as incomplete",
       });
+      
+      playError();
     } catch (error: any) {
       console.error('Error undoing complete:', error);
       toast({
@@ -408,6 +431,8 @@ const Index = () => {
       if (error) throw error;
 
       setTasks((prev) => prev.filter((t) => t.id !== id));
+      
+      playTaskDeleted();
     } catch (error: any) {
       console.error('Error deleting task:', error);
       toast({
@@ -540,6 +565,7 @@ const Index = () => {
               Focus Quest
             </h1>
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
+            <SoundToggle />
             <Button
               onClick={() => navigate('/mindmap')}
               variant="outline"
