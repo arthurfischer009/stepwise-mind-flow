@@ -11,7 +11,7 @@ import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Network, BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
+import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -621,15 +621,6 @@ const Index = () => {
             />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
-            <Button
-              onClick={() => navigate('/mindmap')}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Network className="w-4 h-4" />
-              Mindmap
-            </Button>
             <Button
               onClick={() => navigate('/categories')}
               variant="outline"
