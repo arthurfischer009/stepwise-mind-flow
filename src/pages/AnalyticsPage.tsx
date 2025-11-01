@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, Calendar, Award, Target, Clock, Zap, BarChart3 } from "lucide-react";
+import { ArrowLeft, TrendingUp, Calendar, Award, Target, Clock, Zap, BarChart3, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSupabase } from "@/lib/safeSupabase";
 import { supabase } from "@/integrations/supabase/client";
@@ -331,6 +331,114 @@ const AnalyticsPage = () => {
     ];
   };
 
+  // Monthly Overview: Tasks completed per month
+  const getMonthlyTasksOverview = () => {
+    const monthlyData = new Map<string, { completed: number; total: number; points: number }>();
+    
+    tasks.forEach(task => {
+      const date = task.completed_at ? parseISO(task.completed_at) : parseISO(task.created_at || new Date().toISOString());
+      const monthKey = format(date, 'MMM yyyy');
+      
+      const current = monthlyData.get(monthKey) || { completed: 0, total: 0, points: 0 };
+      monthlyData.set(monthKey, {
+        completed: current.completed + (task.completed ? 1 : 0),
+        total: current.total + 1,
+        points: current.points + (task.completed ? (task.points || 1) : 0)
+      });
+    });
+
+    return Array.from(monthlyData.entries())
+      .map(([month, data]) => ({ month, ...data }))
+      .sort((a, b) => {
+        const dateA = new Date(a.month);
+        const dateB = new Date(b.month);
+        return dateA.getTime() - dateB.getTime();
+      })
+      .slice(-6); // Last 6 months
+  };
+
+  // Monthly Overview: Best performing days
+  const getMonthlyProductiveDays = () => {
+    const currentMonth = format(new Date(), 'MMM yyyy');
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+
+    const dailyData = new Map<string, number>();
+    
+    tasks.filter(t => t.completed && t.completed_at).forEach(task => {
+      const taskDate = parseISO(task.completed_at!);
+      if (taskDate >= monthStart && taskDate <= monthEnd) {
+        const dayKey = format(taskDate, 'MMM dd');
+        dailyData.set(dayKey, (dailyData.get(dayKey) || 0) + 1);
+      }
+    });
+
+    return Array.from(dailyData.entries())
+      .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7); // Top 7 days
+  };
+
+  // Monthly Overview: Current vs Previous Month
+  const getMonthComparison = () => {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const currentMonth = tasks.filter(t => {
+      if (!t.completed || !t.completed_at) return false;
+      const date = parseISO(t.completed_at);
+      return date >= currentMonthStart && date <= currentMonthEnd;
+    });
+
+    const previousMonth = tasks.filter(t => {
+      if (!t.completed || !t.completed_at) return false;
+      const date = parseISO(t.completed_at);
+      return date >= previousMonthStart && date <= previousMonthEnd;
+    });
+
+    return [
+      {
+        period: format(previousMonthStart, 'MMM yyyy'),
+        completed: previousMonth.length,
+        points: previousMonth.reduce((sum, t) => sum + (t.points || 1), 0)
+      },
+      {
+        period: format(currentMonthStart, 'MMM yyyy'),
+        completed: currentMonth.length,
+        points: currentMonth.reduce((sum, t) => sum + (t.points || 1), 0)
+      }
+    ];
+  };
+
+  // Monthly Overview: Category distribution this month
+  const getMonthlyCategories = () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const categoryMap = new Map<string, number>();
+    
+    tasks.filter(t => {
+      if (!t.completed || !t.completed_at) return false;
+      const date = parseISO(t.completed_at);
+      return date >= monthStart && date <= monthEnd;
+    }).forEach(task => {
+      const cat = task.category || 'Uncategorized';
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+    });
+
+    return Array.from(categoryMap.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))'
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -596,6 +704,106 @@ const AnalyticsPage = () => {
                 <Area type="monotone" dataKey="points" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Monthly Overview Section */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Calendar className="w-6 h-6 text-primary" />
+            Monthly Overview
+          </h2>
+          
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Monthly Tasks Trend */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Last 6 Months Progress
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={getMonthlyTasksOverview()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="completed" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} name="Completed" />
+                  <Area type="monotone" dataKey="points" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} name="XP" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Current vs Previous Month */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+                Month-over-Month Comparison
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={getMonthComparison()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="period" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="completed" fill="hsl(var(--primary))" name="Tasks" />
+                  <Bar dataKey="points" fill="hsl(var(--accent))" name="XP" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Top Productive Days This Month */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4 text-primary" />
+                Most Productive Days (This Month)
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={getMonthlyProductiveDays()} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis dataKey="day" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--secondary))" name="Tasks Completed" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* This Month's Categories */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Target className="w-4 h-4 text-primary" />
+                Category Focus (This Month)
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={getMonthlyCategories()}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={90}
+                    fill="hsl(var(--primary))"
+                    dataKey="value"
+                  >
+                    {getMonthlyCategories().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
