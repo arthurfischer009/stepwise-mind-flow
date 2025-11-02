@@ -11,6 +11,7 @@ import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { MorningRitual } from "@/components/MorningRitual";
 import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
+import { DashboardGrid } from "@/components/DashboardGrid";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
@@ -775,56 +776,90 @@ const Index = () => {
         </header>
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
-          <div className="space-y-4">
-            <ProgressStats
-              level={level}
-              completedToday={completedToday}
-              totalTasks={tasks.length}
-              totalPoints={totalPoints}
-              currentStreak={currentStreak}
-            />
-            <div className="rounded-2xl bg-card border border-border p-4">
-              <CurrentLevel
-                task={currentTask}
-                onComplete={handleCompleteTask}
-                level={level}
-                categoryColor={currentTaskColor}
-                categories={categories}
-                onUpdateCategory={handleUpdateCategory}
-              />
-            </div>
-            <TodayPointsBreakdown
-              tasks={tasks}
-              categoryColors={categoryColors}
-              categories={categories}
-            />
-            <TodayCompletionTimeline
-              tasks={tasks}
-              categoryColors={categoryColors}
-            />
-          </div>
+          <DashboardGrid
+            cards={[
+              {
+                id: 'progress-stats',
+                component: (
+                  <ProgressStats
+                    level={level}
+                    completedToday={completedToday}
+                    totalTasks={tasks.length}
+                    totalPoints={totalPoints}
+                    currentStreak={currentStreak}
+                  />
+                ),
+              },
+              {
+                id: 'current-level',
+                component: (
+                  <div className="rounded-2xl bg-card border border-border p-4">
+                    <CurrentLevel
+                      task={currentTask}
+                      onComplete={handleCompleteTask}
+                      level={level}
+                      categoryColor={currentTaskColor}
+                      categories={categories}
+                      onUpdateCategory={handleUpdateCategory}
+                    />
+                  </div>
+                ),
+              },
+              {
+                id: 'today-points',
+                component: (
+                  <TodayPointsBreakdown
+                    tasks={tasks}
+                    categoryColors={categoryColors}
+                    categories={categories}
+                  />
+                ),
+              },
+              {
+                id: 'today-timeline',
+                component: (
+                  <TodayCompletionTimeline
+                    tasks={tasks}
+                    categoryColors={categoryColors}
+                  />
+                ),
+              },
+            ]}
+          />
 
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-card border border-border p-4">
-              <TaskPlanner
-                tasks={tasks}
-                onAddTask={handleAddTask}
-                onDeleteTask={handleDeleteTask}
-                onReorderTasks={handleReorderTasks}
-                onUpdatePoints={handleUpdatePoints}
-                onUpdateTask={handleUpdateTask}
-                categoryColors={categoryColors}
-                categories={categories}
-              />
-            </div>
-            <AISuggestions
-              tasks={tasks}
-              suggestions={suggestions}
-              onSuggestionsChange={setSuggestions}
-              onAddTask={handleAddTask}
-              categoryColors={categoryColors}
-            />
-          </div>
+          <DashboardGrid
+            cards={[
+              {
+                id: 'task-planner',
+                component: (
+                  <div className="rounded-2xl bg-card border border-border p-4">
+                    <TaskPlanner
+                      tasks={tasks}
+                      onAddTask={handleAddTask}
+                      onDeleteTask={handleDeleteTask}
+                      onReorderTasks={handleReorderTasks}
+                      onUpdatePoints={handleUpdatePoints}
+                      onUpdateTask={handleUpdateTask}
+                      categoryColors={categoryColors}
+                      categories={categories}
+                    />
+                  </div>
+                ),
+              },
+              {
+                id: 'ai-suggestions',
+                component: (
+                  <AISuggestions
+                    tasks={tasks}
+                    suggestions={suggestions}
+                    onSuggestionsChange={setSuggestions}
+                    onAddTask={handleAddTask}
+                    categoryColors={categoryColors}
+                  />
+                ),
+              },
+            ]}
+          />
         </div>
 
         {/* Analytics Section */}
