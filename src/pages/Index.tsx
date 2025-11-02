@@ -10,6 +10,7 @@ import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
 import { MorningRitual } from "@/components/MorningRitual";
+import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
@@ -781,6 +782,11 @@ const Index = () => {
               totalTasks={tasks.length}
               totalPoints={totalPoints}
               currentStreak={currentStreak}
+            />
+            <TodayPointsBreakdown
+              tasks={tasks}
+              categoryColors={categoryColors}
+              categories={categories}
             />
             <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
