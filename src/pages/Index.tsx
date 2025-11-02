@@ -6,6 +6,8 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
+import { ComboCounter } from "@/components/ComboCounter";
+import { FloatingXP } from "@/components/FloatingXP";
 import { SoundToggle } from "@/components/SoundToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
@@ -14,6 +16,7 @@ import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
 import { DashboardGrid } from "@/components/DashboardGrid";
 import { useToast } from "@/hooks/use-toast";
+import { useComboSystem } from "@/hooks/useComboSystem";
 import { Button } from "@/components/ui/button";
 import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -85,7 +88,9 @@ const Index = () => {
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [floatingXPs, setFloatingXPs] = useState<Array<{ id: string; xp: number; multiplier: number }>>([]);
   const { toast } = useToast();
+  const { combo, multiplier, addCombo, resetCombo } = useComboSystem();
 
   // Check if "Plan your day" feature should be unlocked
   useEffect(() => {
@@ -469,6 +474,17 @@ const Index = () => {
       setTasks(updatedTasks);
       setLevel((prev) => prev + 1);
       
+      // Add combo and get multiplier
+      const currentMultiplier = addCombo();
+      
+      // Calculate XP with multiplier
+      const baseXP = currentTask.points || 1;
+      const bonusXP = Math.round(baseXP * (currentMultiplier - 1));
+      
+      // Show floating XP
+      const xpId = `xp-${Date.now()}`;
+      setFloatingXPs(prev => [...prev, { id: xpId, xp: baseXP, multiplier: currentMultiplier }]);
+      
       // Trigger level-up effects
       triggerLevelUpConfetti();
       playLevelComplete();
@@ -477,9 +493,13 @@ const Index = () => {
       // Check for new achievements
       await checkAndUnlockAchievements(updatedTasks);
       
+      const description = bonusXP > 0 
+        ? `Level ${level + 1} • +${baseXP} XP (+${bonusXP} Combo Bonus!)` 
+        : `You've reached Level ${level + 1}`;
+      
       toast({
         title: "Level Complete! 🎉",
-        description: `You've reached Level ${level + 1}`,
+        description,
         action: (
           <Button
             variant="outline"
@@ -1453,6 +1473,21 @@ const Index = () => {
           onClose={() => setNewAchievement(null)}
         />
       )}
+      
+      <ComboCounter 
+        combo={combo} 
+        multiplier={multiplier}
+        onExpire={resetCombo}
+      />
+      
+      {floatingXPs.map(({ id, xp, multiplier }) => (
+        <FloatingXP
+          key={id}
+          xp={xp}
+          multiplier={multiplier}
+          onComplete={() => setFloatingXPs(prev => prev.filter(fx => fx.id !== id))}
+        />
+      ))}
     </div>
   );
 };
