@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, ThumbsUp, ThumbsDown, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Calendar, Loader2, Sparkles, RefreshCw, Sun, CloudSun, Moon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,7 +31,7 @@ interface Category {
 interface AISuggestion {
   title: string;
   category: string;
-  priority: "low" | "medium" | "high";
+  repeatCount: number;
 }
 
 interface DailyPlanningDialogProps {
@@ -56,8 +56,8 @@ export const DailyPlanningDialog = ({
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const [addedTasks, setAddedTasks] = useState<string[]>([]);
+  const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
+  const [addedTasks, setAddedTasks] = useState<Array<{ title: string; time: string }>>([]);
   const { toast } = useToast();
 
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -72,13 +72,23 @@ export const DailyPlanningDialog = ({
   const loadSuggestions = async () => {
     setLoading(true);
     try {
-      const pendingTasks = tasks.filter(t => !t.completed);
+      const completedTasks = tasks.filter(t => t.completed);
       
+      if (completedTasks.length === 0) {
+        toast({
+          title: "Keine Historie",
+          description: "Erledige erst ein paar Tasks, damit ich lernen kann!",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('ai-suggest-tasks', {
         body: {
-          type: 'suggest',
-          existingTasks: pendingTasks.map(t => ({ title: t.title, category: t.category })),
-          categories: categories.map(c => c.name),
+          completedTasks: completedTasks.map(t => ({ 
+            title: t.title, 
+            category: t.category 
+          })),
         }
       });
 
@@ -95,8 +105,8 @@ export const DailyPlanningDialog = ({
       console.error('Error loading suggestions:', error);
       playError();
       toast({
-        title: "AI Fehler",
-        description: "Konnte keine Task-Vorschläge laden",
+        title: "Fehler",
+        description: "Konnte keine Vorschläge laden",
         variant: "destructive",
       });
     } finally {
@@ -104,17 +114,24 @@ export const DailyPlanningDialog = ({
     }
   };
 
-  const handleSwipe = (direction: "left" | "right") => {
-    setSwipeDirection(direction);
+  const handleTimeChoice = (time: "morning" | "noon" | "evening" | "skip") => {
+    setSwipeDirection(time);
     playClick();
 
     setTimeout(() => {
       const current = suggestions[currentIndex];
       
-      if (direction === "right" && current) {
-        // Task hinzufügen
+      if (time !== "skip" && current) {
+        // Task mit Tageszeit-Kategorie hinzufügen
+        const timeLabels = {
+          morning: "🌅 Morgens",
+          noon: "☀️ Mittags", 
+          evening: "🌙 Abends"
+        };
+        
+        const timeLabel = timeLabels[time];
         onAddTask(current.title, current.category);
-        setAddedTasks(prev => [...prev, current.title]);
+        setAddedTasks(prev => [...prev, { title: current.title, time: timeLabel }]);
       }
 
       // Zum nächsten Vorschlag
@@ -125,7 +142,7 @@ export const DailyPlanningDialog = ({
         playPowerUp();
         toast({
           title: "Tag geplant!",
-          description: `${addedTasks.length + (direction === "right" ? 1 : 0)} Tasks hinzugefügt`,
+          description: `${addedTasks.length + (time !== "skip" ? 1 : 0)} Tasks eingeplant`,
         });
         setOpen(false);
         setSuggestions([]);
@@ -138,15 +155,6 @@ export const DailyPlanningDialog = ({
 
   const currentSuggestion = suggestions[currentIndex];
   const progress = suggestions.length > 0 ? ((currentIndex + 1) / suggestions.length) * 100 : 0;
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "text-red-500";
-      case "medium": return "text-yellow-500";
-      case "low": return "text-green-500";
-      default: return "text-muted-foreground";
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -162,7 +170,7 @@ export const DailyPlanningDialog = ({
             Plan your day
           </DialogTitle>
           <DialogDescription>
-            Swipe nach rechts um Tasks hinzuzufügen, nach links um zu überspringen
+            Aufgaben, die du oft machst - wann möchtest du sie heute erledigen?
           </DialogDescription>
         </DialogHeader>
 
@@ -178,15 +186,15 @@ export const DailyPlanningDialog = ({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 space-y-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">AI denkt nach...</p>
+              <p className="text-sm text-muted-foreground">Analysiere deine Tasks...</p>
             </div>
           ) : !currentSuggestion ? (
             <div className="flex flex-col items-center justify-center py-16 space-y-4">
               <Calendar className="w-16 h-16 text-muted-foreground" />
-              <p className="text-muted-foreground">Keine Vorschläge mehr</p>
+              <p className="text-muted-foreground">Keine wiederkehrenden Tasks gefunden</p>
               <Button onClick={loadSuggestions} variant="outline" className="gap-2">
                 <RefreshCw className="w-4 h-4" />
-                Neue laden
+                Neu laden
               </Button>
             </div>
           ) : (
@@ -194,20 +202,19 @@ export const DailyPlanningDialog = ({
               {/* Task Card */}
               <div 
                 className={`relative bg-gradient-to-br from-card to-card/50 border-2 rounded-2xl p-8 transition-all duration-300 ${
-                  swipeDirection === "left" ? "translate-x-[-200%] opacity-0 rotate-[-20deg]" :
-                  swipeDirection === "right" ? "translate-x-[200%] opacity-0 rotate-[20deg]" :
-                  "translate-x-0 opacity-100 rotate-0"
+                  swipeDirection === "skip" ? "translate-x-[-200%] opacity-0 rotate-[-20deg]" :
+                  swipeDirection ? "translate-y-[-200%] opacity-0 scale-95" :
+                  "translate-x-0 translate-y-0 opacity-100 scale-100"
                 }`}
               >
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-2xl font-bold flex-1">{currentSuggestion.title}</h3>
-                    <Badge 
-                      variant="outline" 
-                      className={getPriorityColor(currentSuggestion.priority)}
-                    >
-                      {currentSuggestion.priority}
-                    </Badge>
+                    {currentSuggestion.repeatCount > 1 && (
+                      <Badge variant="secondary">
+                        {currentSuggestion.repeatCount}x gemacht
+                      </Badge>
+                    )}
                   </div>
 
                   {currentSuggestion.category && (
@@ -228,31 +235,63 @@ export const DailyPlanningDialog = ({
                 </div>
               </div>
 
-              {/* Swipe Buttons */}
-              <div className="flex items-center justify-center gap-6 pt-4">
+              {/* Time Choice Buttons */}
+              <div className="grid grid-cols-2 gap-3">
                 <Button
-                  onClick={() => handleSwipe("left")}
+                  onClick={() => handleTimeChoice("morning")}
                   variant="outline"
                   size="lg"
-                  className="rounded-full w-16 h-16 border-2 border-red-500/50 hover:bg-red-500/10 hover:border-red-500"
+                  className="h-16 flex-col gap-1"
                   disabled={swipeDirection !== null}
                 >
-                  <ThumbsDown className="w-6 h-6 text-red-500" />
+                  <Sun className="w-5 h-5" />
+                  <span className="text-xs">Morgens</span>
                 </Button>
 
                 <Button
-                  onClick={() => handleSwipe("right")}
+                  onClick={() => handleTimeChoice("noon")}
+                  variant="outline"
                   size="lg"
-                  className="rounded-full w-20 h-20 text-lg font-semibold"
+                  className="h-16 flex-col gap-1"
                   disabled={swipeDirection !== null}
                 >
-                  <ThumbsUp className="w-8 h-8" />
+                  <CloudSun className="w-5 h-5" />
+                  <span className="text-xs">Mittags</span>
+                </Button>
+
+                <Button
+                  onClick={() => handleTimeChoice("evening")}
+                  variant="outline"
+                  size="lg"
+                  className="h-16 flex-col gap-1"
+                  disabled={swipeDirection !== null}
+                >
+                  <Moon className="w-5 h-5" />
+                  <span className="text-xs">Abends</span>
+                </Button>
+
+                <Button
+                  onClick={() => handleTimeChoice("skip")}
+                  variant="outline"
+                  size="lg"
+                  className="h-16 flex-col gap-1 border-red-500/50 hover:bg-red-500/10"
+                  disabled={swipeDirection !== null}
+                >
+                  <X className="w-5 h-5 text-red-500" />
+                  <span className="text-xs text-red-500">Weg damit</span>
                 </Button>
               </div>
 
               {addedTasks.length > 0 && (
-                <div className="text-center text-sm text-muted-foreground">
-                  {addedTasks.length} Tasks hinzugefügt
+                <div className="text-center text-sm text-muted-foreground space-y-1">
+                  <div className="font-semibold">{addedTasks.length} Tasks eingeplant</div>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {addedTasks.slice(-3).map((task, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {task.time}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
