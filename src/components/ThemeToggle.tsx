@@ -48,8 +48,8 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeTheme("mint")}>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-            <span>Mint (Green)</span>
+            <div className="w-4 h-4 rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-teal-400" />
+            <span>Mint Colors (Bright)</span>
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
