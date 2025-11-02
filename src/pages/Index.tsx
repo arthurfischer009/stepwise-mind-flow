@@ -15,7 +15,7 @@ import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
 import { DashboardGrid } from "@/components/DashboardGrid";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
+import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -84,6 +84,7 @@ const Index = () => {
   const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
 
   // Check if "Plan your day" feature should be unlocked
@@ -242,14 +243,6 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
-      // Ensure all data is assigned to current user and visible
-      try {
-        await supabase.rpc('reassign_all_tasks_to_current_user');
-        console.log('Successfully reassigned all data');
-      } catch (reassignErr) {
-        console.error('Could not reassign tasks:', reassignErr);
-      }
-
       // Load tasks
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
@@ -280,6 +273,27 @@ const Index = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncData = async () => {
+    setSyncing(true);
+    try {
+      await supabase.rpc('reassign_all_tasks_to_current_user');
+      await loadTasks();
+      toast({
+        title: 'Daten synchronisiert! ✅',
+        description: 'Alle Tasks und Kategorien wurden deinem Account zugeordnet.',
+      });
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Synchronisierung fehlgeschlagen',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -744,6 +758,16 @@ const Index = () => {
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
             <ThemeToggle />
+            <Button
+              onClick={handleSyncData}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={syncing}
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </Button>
             <Button
               onClick={() => setShowMorningRitual(true)}
               variant="outline"
