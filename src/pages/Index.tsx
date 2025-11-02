@@ -381,15 +381,23 @@ const Index = () => {
 
   const handleAddTask = async (title: string, category?: string, points: number = 1) => {
     try {
+      console.log('handleAddTask called', { title, category, points });
       if (!user) {
         toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
+        return;
+      }
+
+      const cleanTitle = (title || '').trim();
+      if (!cleanTitle) {
+        toast({ title: "Titel fehlt", description: "Bitte gib einen Task-Titel ein.", variant: "destructive" });
         return;
       }
 
       const maxSortOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order || 0)) : 0;
 
       // Auto-create category in parallel if needed
-      const needsNewCategory = category && !categories.find(c => c.name === category);
+      const needsNewCategory = !!(category && !categories.find(c => c.name === category));
+      console.log('needsNewCategory', needsNewCategory);
       
       const categoryColorPalette = [
         'hsl(221, 83%, 53%)',   // Blue
@@ -406,7 +414,7 @@ const Index = () => {
       const promises = [
         supabase
           .from('tasks')
-          .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points, user_id: user.id })
+          .insert({ title: cleanTitle, category, completed: false, sort_order: maxSortOrder + 1, points, user_id: user.id })
           .select()
           .single()
       ];
@@ -421,7 +429,7 @@ const Index = () => {
         promises.push(
           supabase
             .from('categories')
-            .insert({ name: category, color: defaultColor, user_id: user.id })
+            .insert({ name: category!, color: defaultColor, user_id: user.id })
             .select()
             .single()
         );
@@ -430,14 +438,16 @@ const Index = () => {
       const results = await Promise.all(promises);
       const taskResult = results[0];
 
-      if (taskResult.error) throw taskResult.error;
+      if ((taskResult as any).error) throw (taskResult as any).error;
+
+      console.log('Task created', (taskResult as any).data);
 
       // Update local state
-      setTasks((prev) => [...prev, taskResult.data]);
+      setTasks((prev) => [...prev, (taskResult as any).data]);
       
       // Update categories if a new one was created
-      if (needsNewCategory && results[1]?.data) {
-        setCategories((prev) => [...prev, results[1].data]);
+      if (needsNewCategory && results[1] && (results[1] as any).data) {
+        setCategories((prev) => [...prev, (results[1] as any).data]);
       }
 
       toast({

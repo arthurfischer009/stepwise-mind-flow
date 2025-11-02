@@ -43,9 +43,13 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTask.trim()) {
-      const finalCategory = showCustomInput ? customCategory.trim() : category;
-      onAddTask(newTask.trim(), finalCategory || undefined);
+    const title = newTask.trim();
+    const finalCategory = (showCustomInput ? customCategory.trim() : category) || "";
+
+    console.log("TaskPlanner submit", { title, category: finalCategory || undefined });
+
+    if (title) {
+      onAddTask(title, finalCategory || undefined);
       setNewTask("");
       setCategory("");
       setShowCustomInput(false);
@@ -122,6 +126,8 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
           <Button
             type="submit"
             size="sm"
+            disabled={!newTask.trim()}
+            aria-disabled={!newTask.trim()}
             className="bg-primary hover:bg-primary/90 transition-all h-9 px-3"
           >
             <Plus className="w-4 h-4" />
