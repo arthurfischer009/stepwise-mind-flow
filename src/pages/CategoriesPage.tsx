@@ -197,6 +197,11 @@ const CategoriesPage = () => {
 
   const handleDeleteCategory = async (categoryName: string) => {
     setDeleting(categoryName);
+    
+    // Optimistic update: remove immediately from UI
+    setCategories(prev => prev.filter(c => c.name !== categoryName));
+    setTasks(prev => prev.map(t => t.category === categoryName ? { ...t, category: undefined } : t));
+    
     try {
       const supabase = await getSupabase();
       if (!supabase) {
@@ -204,15 +209,7 @@ const CategoriesPage = () => {
         return;
       }
 
-      // Update all tasks with this category to have no category
-      const { error: tasksError } = await supabase
-        .from('tasks')
-        .update({ category: null })
-        .eq('category', categoryName);
-
-      if (tasksError) throw tasksError;
-
-      // Delete the category
+      // Delete the category (tasks update happens via database cascade or we handle it)
       const { error: catError } = await supabase
         .from('categories')
         .delete()
@@ -220,7 +217,14 @@ const CategoriesPage = () => {
 
       if (catError) throw catError;
 
-      await loadData();
+      // Update all tasks with this category to have no category (in background)
+      supabase
+        .from('tasks')
+        .update({ category: null })
+        .eq('category', categoryName)
+        .then(({ error }) => {
+          if (error) console.error('Error updating tasks:', error);
+        });
       
       toast({
         title: "Category deleted",
@@ -228,6 +232,8 @@ const CategoriesPage = () => {
       });
     } catch (error: any) {
       console.error('Error deleting category:', error);
+      // Rollback on error
+      await loadData();
       toast({
         title: "Error",
         description: "Failed to delete category",
