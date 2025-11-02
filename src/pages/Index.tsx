@@ -8,6 +8,7 @@ import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { MorningRitual } from "@/components/MorningRitual";
 import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
@@ -82,6 +83,7 @@ const Index = () => {
   const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
+  const [showAchievementsSheet, setShowAchievementsSheet] = useState(false);
   const { toast } = useToast();
 
   // Check if "Plan your day" feature should be unlocked
@@ -713,65 +715,88 @@ const Index = () => {
         dailyLoginBonus={dailyLoginBonus}
       />
       
-      <div className="container max-w-6xl mx-auto px-4 py-4">
+      <div className="container max-w-6xl mx-auto px-4 py-4 pb-20 md:pb-4">
         <header className="text-center mb-4">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
-              Focus Quest
-            </h1>
-            <DailyPlanningDialog
-              tasks={tasks}
-              onAddTask={handleAddTask}
-              onUpdatePriority={handleUpdatePriority}
-              categoryColors={categoryColors}
-              categories={categories}
-              externalOpen={showPlanningDialog}
-              onExternalOpenChange={setShowPlanningDialog}
-              completedCount={tasks.filter(t => t.completed).length}
-            />
-            <AchievementsPanel unlockedAchievements={unlockedAchievements} />
-            <SoundToggle />
-            <Button
-              onClick={() => setShowMorningRitual(true)}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Star className="w-4 h-4" />
-              Morning
-            </Button>
-            <Button
-              onClick={() => navigate('/categories')}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Target className="w-4 h-4" />
-              Categories
-            </Button>
-            <Button
-              onClick={() => navigate('/analytics')}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </Button>
-            <Button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                navigate('/auth');
-              }}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
+          {/* Mobile Header - Simplified */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+                Focus Quest
+              </h1>
+              <DailyPlanningDialog
+                tasks={tasks}
+                onAddTask={handleAddTask}
+                onUpdatePriority={handleUpdatePriority}
+                categoryColors={categoryColors}
+                categories={categories}
+                externalOpen={showPlanningDialog}
+                onExternalOpenChange={setShowPlanningDialog}
+                completedCount={tasks.filter(t => t.completed).length}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">One task. One level. Total focus.</p>
           </div>
-          <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
+
+          {/* Desktop Header - Full Navigation */}
+          <div className="hidden md:block">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
+                Focus Quest
+              </h1>
+              <DailyPlanningDialog
+                tasks={tasks}
+                onAddTask={handleAddTask}
+                onUpdatePriority={handleUpdatePriority}
+                categoryColors={categoryColors}
+                categories={categories}
+                externalOpen={showPlanningDialog}
+                onExternalOpenChange={setShowPlanningDialog}
+                completedCount={tasks.filter(t => t.completed).length}
+              />
+              <AchievementsPanel unlockedAchievements={unlockedAchievements} />
+              <SoundToggle />
+              <Button
+                onClick={() => setShowMorningRitual(true)}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Star className="w-4 h-4" />
+                Morning
+              </Button>
+              <Button
+                onClick={() => navigate('/categories')}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Target className="w-4 h-4" />
+                Categories
+              </Button>
+              <Button
+                onClick={() => navigate('/analytics')}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Button>
+              <Button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate('/auth');
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
+          </div>
         </header>
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
@@ -1357,6 +1382,22 @@ const Index = () => {
           </div>
         </div>
       </div>
+      
+      <MobileBottomNav
+        onCategoriesClick={() => navigate('/categories')}
+        onAnalyticsClick={() => navigate('/analytics')}
+        onMorningClick={() => setShowMorningRitual(true)}
+        onAchievementsClick={() => {
+          const trigger = document.querySelector('[data-achievements-trigger]') as HTMLElement;
+          if (trigger) {
+            trigger.click();
+          }
+        }}
+        onSignOut={async () => {
+          await supabase.auth.signOut();
+          navigate('/auth');
+        }}
+      />
       
       {newAchievement && (
         <AchievementNotification

@@ -23,7 +23,7 @@ export const AchievementsPanel = ({ unlockedAchievements }: AchievementsPanelPro
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 relative">
+        <Button variant="outline" size="sm" className="gap-2 relative" data-achievements-trigger>
           <Trophy className="w-4 h-4" />
           <span className="hidden sm:inline">Achievements</span>
           <Badge variant="secondary" className="ml-1">
