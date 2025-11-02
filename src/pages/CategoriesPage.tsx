@@ -321,6 +321,12 @@ const CategoriesPage = () => {
   };
 
   const handleChangeColor = async (categoryName: string, newColor: string) => {
+    // Optimistic update - close picker and update UI immediately
+    setEditingColor(null);
+    setCategories(prev => prev.map(cat => 
+      cat.name === categoryName ? { ...cat, color: newColor } : cat
+    ));
+    
     try {
       const supabase = await getSupabase();
       if (!supabase) {
@@ -334,12 +340,6 @@ const CategoriesPage = () => {
         .eq('name', categoryName);
 
       if (error) throw error;
-
-      // Update locally without reloading all data
-      setCategories(prev => prev.map(cat => 
-        cat.name === categoryName ? { ...cat, color: newColor } : cat
-      ));
-      setEditingColor(null);
       
       toast({
         title: "Color updated",
@@ -347,6 +347,8 @@ const CategoriesPage = () => {
       });
     } catch (error: any) {
       console.error('Error changing color:', error);
+      // Rollback on error
+      await loadData();
       toast({
         title: "Error",
         description: "Failed to change color",
@@ -421,17 +423,22 @@ const CategoriesPage = () => {
                       <div
                         className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 cursor-pointer relative group"
                         style={{ backgroundColor: categoryColor }}
-                        onClick={() => setEditingColor(isEditingColor ? null : category.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingColor(isEditingColor ? null : category.name);
+                        }}
                       >
                         {taskCount}
                         {isEditingColor && (
-                          <div className="absolute top-14 left-0 bg-card border-2 border-border rounded-lg p-2 shadow-xl z-50 grid grid-cols-4 gap-2">
+                          <div className="absolute top-14 left-0 bg-card border-2 border-border rounded-lg p-3 shadow-xl z-50 grid grid-cols-4 gap-3 min-w-[200px]">
                             {categoryColorPalette.map((color, idx) => (
-                              <div
+                              <button
                                 key={idx}
-                                className="w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition-transform border-2 border-white"
+                                type="button"
+                                className="w-10 h-10 rounded-full cursor-pointer hover:scale-110 active:scale-95 transition-transform border-2 border-white shadow-md touch-manipulation"
                                 style={{ backgroundColor: color }}
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   handleChangeColor(category.name, color);
                                 }}
