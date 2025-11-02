@@ -43,6 +43,40 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 40px hsl(180 80% 50% / 0.3);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  [data-theme="mint"] {
+    --background: 160 40% 8%;
+    --foreground: 150 15% 95%;
+
+    --card: 160 35% 12%;
+    --card-foreground: 150 15% 95%;
+
+    --popover: 160 40% 10%;
+    --popover-foreground: 150 15% 95%;
+
+    --primary: 150 70% 55%;
+    --primary-foreground: 160 40% 8%;
+
+    --secondary: 165 65% 50%;
+    --secondary-foreground: 150 15% 95%;
+
+    --muted: 160 30% 18%;
+    --muted-foreground: 150 10% 60%;
+
+    --accent: 140 75% 60%;
+    --accent-foreground: 160 40% 8%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 150 15% 95%;
+
+    --border: 160 25% 22%;
+    --input: 160 30% 18%;
+    --ring: 150 70% 55%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(150 70% 55%), hsl(165 65% 50%));
+    --gradient-glow: linear-gradient(135deg, hsl(150 70% 55% / 0.2), hsl(165 65% 50% / 0.1));
+    --shadow-glow: 0 0 40px hsl(150 70% 55% / 0.3);
+  }
 }
 
 @layer base {
