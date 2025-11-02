@@ -73,15 +73,15 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
             >
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent className="bg-card border border-border shadow-lg z-[100]">
-              <SelectItem value="none" className="text-xs">
+            <SelectContent className="bg-background border border-border shadow-lg z-[100]">
+              <SelectItem value="none" className="text-xs hover:bg-accent">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-muted" />
                   No category
                 </div>
               </SelectItem>
               {categories.map((cat) => (
-                <SelectItem key={cat.name} value={cat.name} className="text-xs">
+                <SelectItem key={cat.name} value={cat.name} className="text-xs hover:bg-accent">
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-3 h-3 rounded-full" 
