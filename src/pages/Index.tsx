@@ -801,13 +801,6 @@ const Index = () => {
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
           <div className="space-y-4">
-            <ProgressStats
-              level={level}
-              completedToday={completedToday}
-              totalTasks={tasks.length}
-              totalPoints={totalPoints}
-              currentStreak={currentStreak}
-            />
             <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
                 task={currentTask}
@@ -818,6 +811,13 @@ const Index = () => {
                 onUpdateCategory={handleUpdateCategory}
               />
             </div>
+            <ProgressStats
+              level={level}
+              completedToday={completedToday}
+              totalTasks={tasks.length}
+              totalPoints={totalPoints}
+              currentStreak={currentStreak}
+            />
             <TodayPointsBreakdown
               tasks={tasks}
               categoryColors={categoryColors}
