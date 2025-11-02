@@ -242,6 +242,13 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
+      // First, try to claim orphaned tasks
+      try {
+        await supabase.rpc('claim_orphaned_tasks');
+      } catch (claimError) {
+        console.log('Note: Could not claim orphaned tasks:', claimError);
+      }
+
       // Load tasks
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
