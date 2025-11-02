@@ -245,6 +245,7 @@ const Index = () => {
       // First, try to claim orphaned tasks
       try {
         await supabase.rpc('claim_orphaned_tasks');
+        console.log('Successfully claimed orphaned tasks');
       } catch (claimError) {
         console.log('Note: Could not claim orphaned tasks:', claimError);
       }
@@ -258,6 +259,7 @@ const Index = () => {
 
       if (tasksError) throw tasksError;
 
+      console.log('Loaded tasks:', tasksData?.length || 0);
       setTasks(tasksData || []);
       setLevel(1 + (tasksData?.filter(t => t.completed).length || 0));
 
@@ -267,6 +269,7 @@ const Index = () => {
         .select('*');
 
       if (categoriesError) throw categoriesError;
+      console.log('Loaded categories:', categoriesData?.length || 0);
       setCategories(categoriesData || []);
     } catch (error: any) {
       console.error('Error loading tasks:', error);
