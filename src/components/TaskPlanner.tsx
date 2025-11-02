@@ -64,35 +64,42 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
             placeholder="What's your next challenge?"
             className="flex-1 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
-          <Select
-            value={category || "none"}
-            onValueChange={(value) => setCategory(value === "none" ? "" : value)}
-          >
-            <SelectTrigger 
-              className="w-36 h-9 text-sm bg-card border-border"
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select
+              value={category || "none"}
+              onValueChange={(value) => setCategory(value === "none" ? "" : value)}
             >
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border border-border shadow-lg z-[100]">
-              <SelectItem value="none" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted" />
-                  No category
-                </div>
-              </SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.name} value={cat.name} className="text-xs">
+              <SelectTrigger 
+                className="w-36 h-9 text-sm bg-card border-border"
+              >
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent 
+                className="bg-popover border border-border shadow-xl z-[9999]"
+                position="popper"
+                sideOffset={5}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
+                <SelectItem value="none" className="text-xs cursor-pointer">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
+                    <div className="w-3 h-3 rounded-full bg-muted" />
+                    No category
                   </div>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.name} value={cat.name} className="text-xs cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             type="submit"
             size="sm"
