@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { Trash2, GripVertical, Clock, Pencil, Check, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addMinutes } from "date-fns";
-import { withAlphaHsl } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -202,8 +201,8 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                 <div 
                   className="absolute -top-1 left-0 right-0 h-0.5 rounded-full animate-pulse"
                   style={{ 
-                    backgroundColor: categoryColor ? withAlphaHsl(categoryColor, 0.35) : 'hsl(var(--primary))',
-                    boxShadow: categoryColor ? `0 0 8px ${withAlphaHsl(categoryColor, 0.6)}` : '0 0 8px hsl(var(--primary))' 
+                    backgroundColor: categoryColor || 'hsl(var(--primary))',
+                    boxShadow: `0 0 8px ${categoryColor || 'hsl(var(--primary))'}` 
                   }}
                 />
               )}
@@ -220,7 +219,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                 className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
                 style={{
                   borderColor: categoryColor || 'hsl(var(--border))',
-                  backgroundColor: categoryColor ? withAlphaHsl(categoryColor, 0.06) : undefined,
+                  backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
                   opacity: isBeingDragged ? 0.8 : 1,
                   transform: isBeingDragged && isDraggingTouch
                     ? `translateY(${touchOffset}px) scale(1.05)` 
@@ -231,7 +230,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                   position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
                   touchAction: 'none',
                   boxShadow: isBeingDragged && isDraggingTouch 
-                    ? `0 8px 24px ${categoryColor ? withAlphaHsl(categoryColor, 0.25) : 'rgba(0,0,0,0.15)'}`
+                    ? `0 8px 24px ${categoryColor ? `${categoryColor}40` : 'rgba(0,0,0,0.15)'}`
                     : 'none'
                 }}
               >

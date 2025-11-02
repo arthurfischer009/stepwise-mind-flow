@@ -127,12 +127,11 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor, categorie
       <Button
         onClick={onComplete}
         size="sm"
-        className="group relative overflow-hidden px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-105 animate-pulse"
+        className="group relative overflow-hidden px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-105"
         style={{
           backgroundColor: categoryColor || 'hsl(var(--primary))',
           color: 'white',
-          boxShadow: categoryColor ? `0 0 30px ${categoryColor}80` : '0 0 30px hsl(var(--primary) / 0.5)',
-          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          boxShadow: categoryColor ? `0 0 30px ${categoryColor}80` : '0 0 30px hsl(var(--primary) / 0.5)'
         }}
       >
         <span className="relative z-10 flex items-center gap-2">

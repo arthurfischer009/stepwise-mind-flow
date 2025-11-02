@@ -43,40 +43,6 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 40px hsl(180 80% 50% / 0.3);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  [data-theme="mint"] {
-    --background: 200 25% 10%;
-    --foreground: 180 10% 97%;
-
-    --card: 200 20% 15%;
-    --card-foreground: 180 10% 97%;
-
-    --popover: 200 25% 12%;
-    --popover-foreground: 180 10% 97%;
-
-    --primary: 340 85% 70%;
-    --primary-foreground: 200 25% 10%;
-
-    --secondary: 280 75% 70%;
-    --secondary-foreground: 200 25% 10%;
-
-    --muted: 200 15% 22%;
-    --muted-foreground: 180 5% 65%;
-
-    --accent: 170 70% 65%;
-    --accent-foreground: 200 25% 10%;
-
-    --destructive: 0 70% 65%;
-    --destructive-foreground: 200 25% 10%;
-
-    --border: 200 15% 25%;
-    --input: 200 15% 20%;
-    --ring: 340 85% 70%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(340 85% 70%), hsl(280 75% 70%), hsl(170 70% 65%));
-    --gradient-glow: linear-gradient(135deg, hsl(340 85% 70% / 0.2), hsl(280 75% 70% / 0.15), hsl(170 70% 65% / 0.1));
-    --shadow-glow: 0 0 40px hsl(340 85% 70% / 0.3);
-  }
 }
 
 @layer base {

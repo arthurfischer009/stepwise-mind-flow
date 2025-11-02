@@ -6,21 +6,14 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
-import { AchievementProgress } from "@/components/AchievementProgress";
-import { MilestoneReward } from "@/components/MilestoneReward";
-import { ComboCounter } from "@/components/ComboCounter";
-import { FloatingXP } from "@/components/FloatingXP";
 import { SoundToggle } from "@/components/SoundToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { MorningRitual } from "@/components/MorningRitual";
 import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
-import { DashboardGrid } from "@/components/DashboardGrid";
 import { useToast } from "@/hooks/use-toast";
-import { useComboSystem } from "@/hooks/useComboSystem";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, RefreshCw, Plus } from "lucide-react";
+import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -59,7 +52,6 @@ import {
   playXPGain,
   playError 
 } from "@/lib/sounds";
-import { createParticleBurst, screenShake } from "@/lib/particles";
 
 interface Task {
   id: string;
@@ -90,11 +82,7 @@ const Index = () => {
   const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [floatingXPs, setFloatingXPs] = useState<Array<{ id: string; xp: number; multiplier: number }>>([]);
-  const [showMilestone, setShowMilestone] = useState<number | null>(null);
   const { toast } = useToast();
-  const { combo, multiplier, addCombo, resetCombo } = useComboSystem();
 
   // Check if "Plan your day" feature should be unlocked
   useEffect(() => {
@@ -174,9 +162,9 @@ const Index = () => {
   const checkDailyLogin = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-
+      
       // Get or create user stats
-      const { data: stats, error: fetchError } = await supabase
+      let { data: stats, error: fetchError } = await supabase
         .from('user_stats')
         .select('*')
         .eq('user_id', user?.id)
@@ -261,28 +249,8 @@ const Index = () => {
 
       if (tasksError) throw tasksError;
 
-      // If no tasks returned, try to claim orphaned tasks (mobile safety)
-      if (!tasksData || tasksData.length === 0) {
-        try {
-          await supabase.rpc('claim_orphaned_tasks');
-          const { data: retryTasks } = await supabase
-            .from('tasks')
-            .select('*')
-            .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: true });
-          if (retryTasks) {
-            console.log('Loaded tasks after claim:', retryTasks.length);
-            setTasks(retryTasks);
-            setLevel(1 + (retryTasks.filter(t => t.completed).length || 0));
-          }
-        } catch (e) {
-          console.warn('Auto-claim failed:', e);
-        }
-      } else {
-        console.log('Loaded tasks:', tasksData.length);
-        setTasks(tasksData);
-        setLevel(1 + (tasksData.filter(t => t.completed).length || 0));
-      }
+      setTasks(tasksData || []);
+      setLevel(1 + (tasksData?.filter(t => t.completed).length || 0));
 
       // Load categories
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -290,38 +258,16 @@ const Index = () => {
         .select('*');
 
       if (categoriesError) throw categoriesError;
-      console.log('Loaded categories:', categoriesData?.length || 0);
       setCategories(categoriesData || []);
     } catch (error: any) {
       console.error('Error loading tasks:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load tasks',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSyncData = async () => {
-    setSyncing(true);
-    try {
-      await supabase.rpc('reassign_all_tasks_to_current_user');
-      await loadTasks();
-      toast({
-        title: 'Daten synchronisiert! ✅',
-        description: 'Alle Tasks und Kategorien wurden deinem Account zugeordnet.',
-      });
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast({
-        title: 'Fehler',
-        description: 'Synchronisierung fehlgeschlagen',
-        variant: 'destructive',
-      });
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -353,6 +299,7 @@ const Index = () => {
     if (completedTasks.length === 0) return 0;
 
     let streak = 0;
+    let currentDate = new Date();
     
     // Check each previous day
     for (let dayOffset = 0; dayOffset < 365; dayOffset++) {
@@ -381,23 +328,15 @@ const Index = () => {
 
   const handleAddTask = async (title: string, category?: string, points: number = 1) => {
     try {
-      console.log('handleAddTask called', { title, category, points });
       if (!user) {
         toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
-        return;
-      }
-
-      const cleanTitle = (title || '').trim();
-      if (!cleanTitle) {
-        toast({ title: "Titel fehlt", description: "Bitte gib einen Task-Titel ein.", variant: "destructive" });
         return;
       }
 
       const maxSortOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order || 0)) : 0;
 
       // Auto-create category in parallel if needed
-      const needsNewCategory = !!(category && !categories.find(c => c.name === category));
-      console.log('needsNewCategory', needsNewCategory);
+      const needsNewCategory = category && !categories.find(c => c.name === category);
       
       const categoryColorPalette = [
         'hsl(221, 83%, 53%)',   // Blue
@@ -414,7 +353,7 @@ const Index = () => {
       const promises = [
         supabase
           .from('tasks')
-          .insert({ title: cleanTitle, category, completed: false, sort_order: maxSortOrder + 1, points, user_id: user.id })
+          .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points, user_id: user.id })
           .select()
           .single()
       ];
@@ -429,7 +368,7 @@ const Index = () => {
         promises.push(
           supabase
             .from('categories')
-            .insert({ name: category!, color: defaultColor, user_id: user.id })
+            .insert({ name: category, color: defaultColor, user_id: user.id })
             .select()
             .single()
         );
@@ -438,33 +377,28 @@ const Index = () => {
       const results = await Promise.all(promises);
       const taskResult = results[0];
 
-      if ((taskResult as any).error) throw (taskResult as any).error;
-
-      console.log('Task created', (taskResult as any).data);
+      if (taskResult.error) throw taskResult.error;
 
       // Update local state
-      setTasks((prev) => [...prev, (taskResult as any).data]);
+      setTasks((prev) => [...prev, taskResult.data]);
       
       // Update categories if a new one was created
-      if (needsNewCategory && results[1] && (results[1] as any).data) {
-        setCategories((prev) => [...prev, (results[1] as any).data]);
+      if (needsNewCategory && results[1]?.data) {
+        setCategories((prev) => [...prev, results[1].data]);
       }
 
       toast({
         title: "Task Added",
         description: "New challenge accepted!",
       });
-
+      
       // Play sound effect
       playTaskAdded();
-
-      // Force reload to ensure UI is in sync
-      await loadTasks();
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast({
-        title: "Fehler beim Hinzufügen",
-        description: (error && (error as any).message) ? (error as any).message : "Failed to add task",
+        title: "Error",
+        description: "Failed to add task",
         variant: "destructive",
       });
     }
@@ -487,55 +421,20 @@ const Index = () => {
         t.id === currentTask.id ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
       );
       
-      const newLevel = level + 1;
       setTasks(updatedTasks);
-      setLevel(newLevel);
-      
-      // Add combo and get multiplier
-      const currentMultiplier = addCombo();
-      
-      // Calculate XP with multiplier
-      const baseXP = currentTask.points || 1;
-      const bonusXP = Math.round(baseXP * (currentMultiplier - 1));
-      
-      // Create particle burst at button location
-      const completeButton = document.querySelector('button:has(.lucide-check-circle-2)');
-      if (completeButton) {
-        const rect = completeButton.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const categoryColor = currentTask.category ? categoryColors[currentTask.category] : 'hsl(var(--primary))';
-        createParticleBurst(centerX, centerY, categoryColor);
-      }
-      
-      // Screen shake for impact
-      screenShake(200, 3);
-      
-      // Show floating XP
-      const xpId = `xp-${Date.now()}`;
-      setFloatingXPs(prev => [...prev, { id: xpId, xp: baseXP, multiplier: currentMultiplier }]);
+      setLevel((prev) => prev + 1);
       
       // Trigger level-up effects
       triggerLevelUpConfetti();
       playLevelComplete();
       playXPGain();
       
-      // Check for milestone rewards (every 10 levels)
-      if (newLevel % 10 === 0) {
-        setShowMilestone(newLevel);
-        playAchievementUnlock('epic');
-      }
-      
       // Check for new achievements
       await checkAndUnlockAchievements(updatedTasks);
       
-      const description = bonusXP > 0 
-        ? `Level ${newLevel} • +${baseXP} XP (+${bonusXP} Combo Bonus!)` 
-        : `You've reached Level ${newLevel}`;
-      
       toast({
         title: "Level Complete! 🎉",
-        description,
+        description: `You've reached Level ${level + 1}`,
         action: (
           <Button
             variant="outline"
@@ -666,27 +565,6 @@ const Index = () => {
     }
   };
 
-  const handleRestoreLastCompleted = async () => {
-    try {
-      const lastCompleted = [...tasks]
-        .filter(t => t.completed && t.completed_at)
-        .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())[0];
-      if (!lastCompleted) {
-        toast({ title: "Nothing to restore", description: "No completed tasks found" });
-        return;
-      }
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed: false, completed_at: null })
-        .eq('id', lastCompleted.id);
-      if (error) throw error;
-      setTasks(prev => prev.map(t => t.id === lastCompleted.id ? { ...t, completed: false, completed_at: undefined } : t));
-      toast({ title: "Restored", description: `Moved '${lastCompleted.title}' back to queue` });
-    } catch (e) {
-      console.error('Error restoring task:', e);
-      toast({ title: "Error", description: "Failed to restore", variant: "destructive" });
-    }
-  };
   const handleReorderTasks = async (reorderedTasks: Task[]) => {
     try {
       setTasks(reorderedTasks);
@@ -853,17 +731,6 @@ const Index = () => {
             />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
-            <ThemeToggle />
-            <Button
-              onClick={handleSyncData}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={syncing}
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync'}
-            </Button>
             <Button
               onClick={() => setShowMorningRitual(true)}
               variant="outline"
@@ -907,135 +774,58 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
         </header>
 
-        {/* Quick actions when no upcoming task */}
-        {tasks.filter(t => !t.completed).length === 0 && (
-          <div className="mb-3">
-            <div className="rounded-xl bg-card/70 border border-border p-3 text-center">
-              <p className="text-sm text-muted-foreground mb-2">
-                No upcoming task. {tasks.length > 0 ? `${tasks.filter(t=>t.completed).length} completed` : 'Add one to get started.'}
-              </p>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <Button onClick={() => setShowPlanningDialog(true)} size="sm" className="gap-2">
-                  <Plus className="w-4 h-4" /> Add Task
-                </Button>
-                {tasks.filter(t => t.completed).length > 0 && (
-                  <Button onClick={handleRestoreLastCompleted} variant="outline" size="sm" className="gap-2">
-                    Restore last
-                  </Button>
-                )}
-                <Button onClick={handleSyncData} variant="outline" size="sm" disabled={syncing} className="gap-2">
-                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync
-                </Button>
-              </div>
+        <div className="grid lg:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-4">
+            <ProgressStats
+              level={level}
+              completedToday={completedToday}
+              totalTasks={tasks.length}
+              totalPoints={totalPoints}
+              currentStreak={currentStreak}
+            />
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <CurrentLevel
+                task={currentTask}
+                onComplete={handleCompleteTask}
+                level={level}
+                categoryColor={currentTaskColor}
+                categories={categories}
+                onUpdateCategory={handleUpdateCategory}
+              />
             </div>
+            <TodayPointsBreakdown
+              tasks={tasks}
+              categoryColors={categoryColors}
+              categories={categories}
+            />
           </div>
-        )}
 
-
-        <DashboardGrid
-          storageKey="dashboard-layout"
-          rightBanner={tasks.filter(t => !t.completed).length === 0 ? (
-            <div className="rounded-lg bg-muted/50 border border-border p-2 text-sm text-muted-foreground text-center">
-              No tasks
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <TaskPlanner
+                tasks={tasks}
+                onAddTask={handleAddTask}
+                onDeleteTask={handleDeleteTask}
+                onReorderTasks={handleReorderTasks}
+                onUpdatePoints={handleUpdatePoints}
+                onUpdateTask={handleUpdateTask}
+                categoryColors={categoryColors}
+                categories={categories}
+              />
             </div>
-          ) : null}
-          cards={[
-            {
-              id: 'progress-stats',
-              column: 'left',
-              component: (
-                <ProgressStats
-                  level={level}
-                  completedToday={completedToday}
-                  totalTasks={tasks.length}
-                  totalPoints={totalPoints}
-                  currentStreak={currentStreak}
-                />
-              ),
-            },
-            {
-              id: 'current-level',
-              column: 'left',
-              component: (
-                <div className="rounded-2xl bg-card border border-border p-4">
-                  <CurrentLevel
-                    task={currentTask}
-                    onComplete={handleCompleteTask}
-                    level={level}
-                    categoryColor={currentTaskColor}
-                    categories={categories}
-                    onUpdateCategory={handleUpdateCategory}
-                  />
-                </div>
-              ),
-            },
-            {
-              id: 'today-points',
-              column: 'left',
-              component: (
-                <TodayPointsBreakdown
-                  tasks={tasks}
-                  categoryColors={categoryColors}
-                  categories={categories}
-                />
-              ),
-            },
-            {
-              id: 'today-timeline',
-              column: 'left',
-              component: (
-                <TodayCompletionTimeline
-                  tasks={tasks}
-                  categoryColors={categoryColors}
-                />
-              ),
-            },
-            {
-              id: 'achievement-progress',
-              column: 'left',
-              component: (
-                <AchievementProgress
-                  totalCompleted={tasks.filter(t => t.completed).length}
-                  currentStreak={currentStreak}
-                  totalPoints={totalPoints}
-                  completedToday={completedToday}
-                  categories={[...new Set(tasks.map(t => t.category).filter(Boolean) as string[])]}
-                  unlockedAchievements={unlockedAchievements}
-                />
-              ),
-            },
-            {
-              id: 'task-planner',
-              column: 'right',
-              component: (
-                <div className="rounded-2xl bg-card border border-border p-4">
-                  <TaskPlanner
-                    tasks={tasks}
-                    onAddTask={handleAddTask}
-                    onDeleteTask={handleDeleteTask}
-                    onReorderTasks={handleReorderTasks}
-                    onUpdatePoints={handleUpdatePoints}
-                    onUpdateTask={handleUpdateTask}
-                    categoryColors={categoryColors}
-                    categories={categories}
-                  />
-                </div>
-              ),
-            },
-            {
-              id: 'ai-suggestions',
-              column: 'right',
-              component: (
-                <AISuggestions
-                  tasks={tasks}
-                  suggestions={suggestions}
-                  onSuggestionsChange={setSuggestions}
-                  onAddTask={handleAddTask}
-                  categoryColors={categoryColors}
-                />
-              ),
-            },
-          ]}
+            <TodayCompletionTimeline
+              tasks={tasks}
+              categoryColors={categoryColors}
+            />
+          </div>
+        </div>
+
+        <AISuggestions
+          tasks={tasks}
+          suggestions={suggestions}
+          onSuggestionsChange={setSuggestions}
+          onAddTask={handleAddTask}
+          categoryColors={categoryColors}
         />
 
         {/* Analytics Section */}
@@ -1572,28 +1362,6 @@ const Index = () => {
         <AchievementNotification
           achievement={newAchievement}
           onClose={() => setNewAchievement(null)}
-        />
-      )}
-      
-      <ComboCounter 
-        combo={combo} 
-        multiplier={multiplier}
-        onExpire={resetCombo}
-      />
-      
-      {floatingXPs.map(({ id, xp, multiplier }) => (
-        <FloatingXP
-          key={id}
-          xp={xp}
-          multiplier={multiplier}
-          onComplete={() => setFloatingXPs(prev => prev.filter(fx => fx.id !== id))}
-        />
-      ))}
-      
-      {showMilestone && (
-        <MilestoneReward 
-          level={showMilestone}
-          onClose={() => setShowMilestone(null)}
         />
       )}
     </div>

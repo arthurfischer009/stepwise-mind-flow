@@ -140,14 +140,12 @@ export const DailyPlanningDialog = ({
         // Task mit Tageszeit-Kategorie hinzufügen
         const timeLabels = {
           morning: "🌅 Morgens",
-          noon: "☀️ Mittags",
+          noon: "☀️ Mittags", 
           evening: "🌙 Abends"
         };
-
+        
         const timeLabel = timeLabels[time];
-        // Only use category if it exists in the database, otherwise create new one
-        const categoryToUse = current.category || undefined;
-        onAddTask(current.title, categoryToUse, selectedPoints);
+        onAddTask(current.title, current.category, selectedPoints);
         setAddedTasks(prev => [...prev, { title: current.title, time: timeLabel }]);
       }
 

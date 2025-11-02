@@ -238,8 +238,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_orphaned_tasks: { Args: never; Returns: undefined }
-      reassign_all_tasks_to_current_user: { Args: never; Returns: undefined }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

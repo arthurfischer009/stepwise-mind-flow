@@ -38,22 +38,13 @@ interface TaskPlannerProps {
 export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, onUpdateTask, categoryColors, categories = [] }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customCategory, setCustomCategory] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const title = newTask.trim();
-    const finalCategory = (showCustomInput ? customCategory.trim() : category) || "";
-
-    console.log("TaskPlanner submit", { title, category: finalCategory || undefined });
-
-    if (title) {
-      onAddTask(title, finalCategory || undefined);
+    if (newTask.trim()) {
+      onAddTask(newTask.trim(), category.trim() || undefined);
       setNewTask("");
       setCategory("");
-      setShowCustomInput(false);
-      setCustomCategory("");
     }
   };
 
@@ -73,61 +64,38 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
             placeholder="What's your next challenge?"
             className="flex-1 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
-          {!showCustomInput ? (
-            <Select
-              value={category || "none"}
-              onValueChange={(value) => {
-                if (value === "custom") {
-                  setShowCustomInput(true);
-                  setCategory("");
-                } else {
-                  setCategory(value === "none" ? "" : value);
-                }
-              }}
+          <Select
+            value={category || "none"}
+            onValueChange={(value) => setCategory(value === "none" ? "" : value)}
+          >
+            <SelectTrigger 
+              className="w-36 h-9 text-sm bg-card border-border"
             >
-              <SelectTrigger className="w-36 h-9 text-sm bg-card border-border">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border border-border shadow-lg z-[100]">
-                <SelectItem value="none" className="text-xs hover:bg-accent">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border border-border shadow-lg z-[100]">
+              <SelectItem value="none" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-muted" />
+                  No category
+                </div>
+              </SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.name} value={cat.name} className="text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-muted" />
-                    No category
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.name}
                   </div>
                 </SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.name} value={cat.name} className="text-xs hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      {cat.name}
-                    </div>
-                  </SelectItem>
-                ))}
-                <SelectItem value="custom" className="text-xs hover:bg-accent font-semibold">
-                  <div className="flex items-center gap-2">
-                    <Plus className="w-3 h-3" />
-                    Create new...
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              value={customCategory}
-              onChange={(e) => setCustomCategory(e.target.value)}
-              placeholder="New category name"
-              className="w-36 h-9 text-sm bg-card border-border focus:border-primary transition-colors"
-              autoFocus
-            />
-          )}
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             type="submit"
             size="sm"
-            disabled={!newTask.trim()}
-            aria-disabled={!newTask.trim()}
             className="bg-primary hover:bg-primary/90 transition-all h-9 px-3"
           >
             <Plus className="w-4 h-4" />

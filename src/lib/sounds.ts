@@ -150,11 +150,13 @@ class SoundManager {
   // Power Up - Ascending whoosh
   playPowerUp() {
     if (!this.audioContext) return;
-
+    
     const startFreq = 200;
     const endFreq = 800;
     const duration = 0.3;
-
+    
+    if (!this.audioContext) return;
+    
     this.ensureContext();
     
     const oscillator = this.audioContext.createOscillator();
