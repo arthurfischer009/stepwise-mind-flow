@@ -775,94 +775,92 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-4 mb-4">
-          <DashboardGrid
-            storageKey="dashboard-left"
-            cards={[
-              {
-                id: 'progress-stats',
-                component: (
-                  <ProgressStats
+        <DashboardGrid
+          storageKey="dashboard-layout"
+          cards={[
+            {
+              id: 'progress-stats',
+              column: 'left',
+              component: (
+                <ProgressStats
+                  level={level}
+                  completedToday={completedToday}
+                  totalTasks={tasks.length}
+                  totalPoints={totalPoints}
+                  currentStreak={currentStreak}
+                />
+              ),
+            },
+            {
+              id: 'current-level',
+              column: 'left',
+              component: (
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <CurrentLevel
+                    task={currentTask}
+                    onComplete={handleCompleteTask}
                     level={level}
-                    completedToday={completedToday}
-                    totalTasks={tasks.length}
-                    totalPoints={totalPoints}
-                    currentStreak={currentStreak}
+                    categoryColor={currentTaskColor}
+                    categories={categories}
+                    onUpdateCategory={handleUpdateCategory}
                   />
-                ),
-              },
-              {
-                id: 'current-level',
-                component: (
-                  <div className="rounded-2xl bg-card border border-border p-4">
-                    <CurrentLevel
-                      task={currentTask}
-                      onComplete={handleCompleteTask}
-                      level={level}
-                      categoryColor={currentTaskColor}
-                      categories={categories}
-                      onUpdateCategory={handleUpdateCategory}
-                    />
-                  </div>
-                ),
-              },
-              {
-                id: 'today-points',
-                component: (
-                  <TodayPointsBreakdown
+                </div>
+              ),
+            },
+            {
+              id: 'today-points',
+              column: 'left',
+              component: (
+                <TodayPointsBreakdown
+                  tasks={tasks}
+                  categoryColors={categoryColors}
+                  categories={categories}
+                />
+              ),
+            },
+            {
+              id: 'today-timeline',
+              column: 'left',
+              component: (
+                <TodayCompletionTimeline
+                  tasks={tasks}
+                  categoryColors={categoryColors}
+                />
+              ),
+            },
+            {
+              id: 'task-planner',
+              column: 'right',
+              component: (
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <TaskPlanner
                     tasks={tasks}
+                    onAddTask={handleAddTask}
+                    onDeleteTask={handleDeleteTask}
+                    onReorderTasks={handleReorderTasks}
+                    onUpdatePoints={handleUpdatePoints}
+                    onUpdateTask={handleUpdateTask}
                     categoryColors={categoryColors}
                     categories={categories}
                   />
-                ),
-              },
-              {
-                id: 'today-timeline',
-                component: (
-                  <TodayCompletionTimeline
-                    tasks={tasks}
-                    categoryColors={categoryColors}
-                  />
-                ),
-              },
-            ]}
-          />
-
-          <DashboardGrid
-            storageKey="dashboard-right"
-            cards={[
-              {
-                id: 'task-planner',
-                component: (
-                  <div className="rounded-2xl bg-card border border-border p-4">
-                    <TaskPlanner
-                      tasks={tasks}
-                      onAddTask={handleAddTask}
-                      onDeleteTask={handleDeleteTask}
-                      onReorderTasks={handleReorderTasks}
-                      onUpdatePoints={handleUpdatePoints}
-                      onUpdateTask={handleUpdateTask}
-                      categoryColors={categoryColors}
-                      categories={categories}
-                    />
-                  </div>
-                ),
-              },
-              {
-                id: 'ai-suggestions',
-                component: (
-                  <AISuggestions
-                    tasks={tasks}
-                    suggestions={suggestions}
-                    onSuggestionsChange={setSuggestions}
-                    onAddTask={handleAddTask}
-                    categoryColors={categoryColors}
-                  />
-                ),
-              },
-            ]}
-          />
-        </div>
+                </div>
+              ),
+            },
+            {
+              id: 'ai-suggestions',
+              column: 'right',
+              component: (
+                <AISuggestions
+                  tasks={tasks}
+                  suggestions={suggestions}
+                  onSuggestionsChange={setSuggestions}
+                  onAddTask={handleAddTask}
+                  categoryColors={categoryColors}
+                />
+              ),
+            },
+          ]}
+        />
 
         {/* Analytics Section */}
         <div className="mt-8 space-y-4">

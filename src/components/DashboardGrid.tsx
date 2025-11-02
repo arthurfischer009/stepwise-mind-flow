@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 interface DashboardCard {
   id: string;
   component: React.ReactNode;
+  column: 'left' | 'right';
 }
 
 interface DashboardGridProps {
@@ -73,24 +75,31 @@ export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrd
   const [items, setItems] = useState(cards);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
-  // Load saved order from localStorage
+  // Load saved order and columns from localStorage
   useEffect(() => {
-    const savedOrder = localStorage.getItem(storageKey);
-    if (savedOrder) {
+    const savedData = localStorage.getItem(storageKey);
+    if (savedData) {
       try {
-        const orderIds: string[] = JSON.parse(savedOrder);
-        const orderedCards = orderIds
-          .map(id => cards.find(card => card.id === id))
+        const saved: { id: string; column: 'left' | 'right' }[] = JSON.parse(savedData);
+        const orderedCards = saved
+          .map(({ id, column }) => {
+            const card = cards.find(card => card.id === id);
+            return card ? { ...card, column } : null;
+          })
           .filter(Boolean) as DashboardCard[];
         
         // Add any new cards that aren't in the saved order
-        const newCards = cards.filter(card => !orderIds.includes(card.id));
+        const newCards = cards.filter(card => !saved.some(s => s.id === card.id));
         setItems([...orderedCards, ...newCards]);
       } catch (e) {
         setItems(cards);
@@ -98,16 +107,43 @@ export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrd
     } else {
       setItems(cards);
     }
-  }, [storageKey, cards]);
+  }, [storageKey]);
 
-  // Update items when cards change
-  useEffect(() => {
-    setItems(prevItems => {
-      const prevIds = prevItems.map(item => item.id);
-      const newCards = cards.filter(card => !prevIds.includes(card.id));
-      return [...prevItems, ...newCards];
+  const saveToLocalStorage = (items: DashboardCard[]) => {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(items.map(item => ({ id: item.id, column: item.column })))
+    );
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (activeId === overId) return;
+
+    setItems((items) => {
+      const activeIndex = items.findIndex((item) => item.id === activeId);
+      const overIndex = items.findIndex((item) => item.id === overId);
+
+      if (activeIndex === -1 || overIndex === -1) return items;
+
+      const activeItem = items[activeIndex];
+      const overItem = items[overIndex];
+
+      // If moving to a different column, update the column property
+      if (activeItem.column !== overItem.column) {
+        const newItems = [...items];
+        newItems[activeIndex] = { ...activeItem, column: overItem.column };
+        return arrayMove(newItems, activeIndex, overIndex);
+      }
+
+      return arrayMove(items, activeIndex, overIndex);
     });
-  }, [cards]);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -118,35 +154,53 @@ export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrd
         const newIndex = items.findIndex((item) => item.id === over.id);
         const newOrder = arrayMove(items, oldIndex, newIndex);
         
-        // Save order to localStorage
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify(newOrder.map(item => item.id))
-        );
+        saveToLocalStorage(newOrder);
         
         return newOrder;
       });
+    } else {
+      // Just save the current state (column might have changed in dragOver)
+      saveToLocalStorage(items);
     }
   };
+
+  const leftCards = items.filter(item => item.column === 'left');
+  const rightCards = items.filter(item => item.column === 'right');
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext
-        items={items.map(item => item.id)}
-        strategy={rectSortingStrategy}
-      >
-        <div className={cn("space-y-4", className)}>
-          {items.map((item) => (
-            <SortableCard key={item.id} id={item.id}>
-              {item.component}
-            </SortableCard>
-          ))}
-        </div>
-      </SortableContext>
+      <div className={cn("grid lg:grid-cols-2 gap-4", className)}>
+        <SortableContext
+          items={leftCards.map(item => item.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-4">
+            {leftCards.map((item) => (
+              <SortableCard key={item.id} id={item.id}>
+                {item.component}
+              </SortableCard>
+            ))}
+          </div>
+        </SortableContext>
+
+        <SortableContext
+          items={rightCards.map(item => item.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-4">
+            {rightCards.map((item) => (
+              <SortableCard key={item.id} id={item.id}>
+                {item.component}
+              </SortableCard>
+            ))}
+          </div>
+        </SortableContext>
+      </div>
     </DndContext>
   );
 }
