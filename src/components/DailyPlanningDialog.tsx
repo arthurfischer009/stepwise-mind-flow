@@ -43,6 +43,8 @@ interface DailyPlanningDialogProps {
   onUpdatePriority: (taskId: string, isPriority: boolean) => void;
   categoryColors: { [key: string]: string };
   categories: Category[];
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
 }
 
 export const DailyPlanningDialog = ({
@@ -51,9 +53,14 @@ export const DailyPlanningDialog = ({
   onUpdatePriority,
   categoryColors,
   categories,
+  externalOpen,
+  onExternalOpenChange,
 }: DailyPlanningDialogProps) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [dailyGoal, setDailyGoal] = useState("");
+  
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onExternalOpenChange || setInternalOpen;
   const [quickTasks, setQuickTasks] = useState<Array<{ title: string; category?: string }>>([
     { title: "", category: undefined },
     { title: "", category: undefined },

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 interface MorningRitualProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStartDay: () => void;
   currentStreak: number;
   todayTasksCount: number;
   yesterdayCompleted: number;
@@ -16,6 +17,7 @@ interface MorningRitualProps {
 export const MorningRitual = ({
   open,
   onOpenChange,
+  onStartDay,
   currentStreak,
   todayTasksCount,
   yesterdayCompleted,
@@ -99,7 +101,10 @@ export const MorningRitual = ({
 
           {/* Call to Action */}
           <Button
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              onOpenChange(false);
+              onStartDay();
+            }}
             className="w-full h-12 text-lg font-semibold"
             size="lg"
           >

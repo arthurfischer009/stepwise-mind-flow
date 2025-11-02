@@ -77,6 +77,7 @@ const Index = () => {
   const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
   const [showMorningRitual, setShowMorningRitual] = useState(false);
+  const [showPlanningDialog, setShowPlanningDialog] = useState(false);
   const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const { toast } = useToast();
@@ -678,6 +679,7 @@ const Index = () => {
       <MorningRitual
         open={showMorningRitual}
         onOpenChange={setShowMorningRitual}
+        onStartDay={() => setShowPlanningDialog(true)}
         currentStreak={currentStreak}
         todayTasksCount={tasks.filter(t => !t.completed).length}
         yesterdayCompleted={yesterdayCompleted}
@@ -697,6 +699,8 @@ const Index = () => {
               onUpdatePriority={handleUpdatePriority}
               categoryColors={categoryColors}
               categories={categories}
+              externalOpen={showPlanningDialog}
+              onExternalOpenChange={setShowPlanningDialog}
             />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
