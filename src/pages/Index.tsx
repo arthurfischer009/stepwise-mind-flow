@@ -813,20 +813,19 @@ const Index = () => {
                 categories={categories}
               />
             </div>
+            <AISuggestions
+              tasks={tasks}
+              suggestions={suggestions}
+              onSuggestionsChange={setSuggestions}
+              onAddTask={handleAddTask}
+              categoryColors={categoryColors}
+            />
             <TodayCompletionTimeline
               tasks={tasks}
               categoryColors={categoryColors}
             />
           </div>
         </div>
-
-        <AISuggestions
-          tasks={tasks}
-          suggestions={suggestions}
-          onSuggestionsChange={setSuggestions}
-          onAddTask={handleAddTask}
-          categoryColors={categoryColors}
-        />
 
         {/* Analytics Section */}
         <div className="mt-8 space-y-4">
