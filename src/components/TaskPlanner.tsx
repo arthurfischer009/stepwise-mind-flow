@@ -92,6 +92,7 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
                 <SelectContent 
                   className="bg-popover border border-border shadow-xl z-[9999]"
                   position="popper"
+                  side="top"
                   sideOffset={5}
                   onCloseAutoFocus={(e) => e.preventDefault()}
                 >
