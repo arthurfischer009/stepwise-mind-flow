@@ -84,4 +84,24 @@ All colors MUST be HSL.
   button {
     touch-action: manipulation;
   }
+
+  /* Safe Area Insets for iOS notch/home indicator */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Optimize button interactions on mobile */
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button, a {
+    -webkit-touch-callout: none;
+  }
 }
