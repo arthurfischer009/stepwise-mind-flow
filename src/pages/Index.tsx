@@ -80,7 +80,32 @@ const Index = () => {
   const [showPlanningDialog, setShowPlanningDialog] = useState(false);
   const [dailyLoginBonus, setDailyLoginBonus] = useState(10);
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
+  const [planningUnlocked, setPlanningUnlocked] = useState(false);
   const { toast } = useToast();
+
+  // Check if "Plan your day" feature should be unlocked
+  useEffect(() => {
+    const completedCount = tasks.filter(t => t.completed).length;
+    const wasUnlocked = localStorage.getItem('planningUnlocked') === 'true';
+    
+    if (completedCount >= 10 && !wasUnlocked) {
+      localStorage.setItem('planningUnlocked', 'true');
+      setPlanningUnlocked(true);
+      
+      // Show unlock notification
+      setTimeout(() => {
+        toast({
+          title: "🎉 Feature freigeschaltet!",
+          description: "Du hast 'Plan your day' freigeschaltet! Klicke auf den Kalender-Button.",
+          duration: 5000,
+        });
+        playAchievementUnlock();
+        triggerAchievementConfetti('#10b981');
+      }, 1000);
+    } else if (wasUnlocked) {
+      setPlanningUnlocked(true);
+    }
+  }, [tasks]);
 
   // Check authentication
   useEffect(() => {
@@ -701,6 +726,7 @@ const Index = () => {
               categories={categories}
               externalOpen={showPlanningDialog}
               onExternalOpenChange={setShowPlanningDialog}
+              completedCount={tasks.filter(t => t.completed).length}
             />
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
