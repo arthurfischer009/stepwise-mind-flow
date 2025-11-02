@@ -242,14 +242,9 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
-      // One-time reassignment in dev/single-user context to make sure you see your data
+      // Ensure all data is assigned to current user (dev/single-user safety)
       try {
-        const alreadyReassigned = localStorage.getItem('reassigned_all_tasks') === 'true';
-        if (!alreadyReassigned) {
-          await supabase.rpc('reassign_all_tasks_to_current_user');
-          localStorage.setItem('reassigned_all_tasks', 'true');
-          console.log('Reassigned all tasks/categories to current user');
-        }
+        await supabase.rpc('reassign_all_tasks_to_current_user');
       } catch (reassignErr) {
         console.log('Note: could not reassign tasks:', reassignErr);
       }
