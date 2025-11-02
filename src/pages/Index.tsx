@@ -11,6 +11,7 @@ import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { Timeline } from "@/components/Timeline";
 import { MorningRitual } from "@/components/MorningRitual";
 import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
+import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
@@ -783,11 +784,6 @@ const Index = () => {
               totalPoints={totalPoints}
               currentStreak={currentStreak}
             />
-            <TodayPointsBreakdown
-              tasks={tasks}
-              categoryColors={categoryColors}
-              categories={categories}
-            />
             <div className="rounded-2xl bg-card border border-border p-4">
               <CurrentLevel
                 task={currentTask}
@@ -798,18 +794,29 @@ const Index = () => {
                 onUpdateCategory={handleUpdateCategory}
               />
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-card border border-border p-4">
-            <TaskPlanner
+            <TodayPointsBreakdown
               tasks={tasks}
-              onAddTask={handleAddTask}
-              onDeleteTask={handleDeleteTask}
-              onReorderTasks={handleReorderTasks}
-              onUpdatePoints={handleUpdatePoints}
-              onUpdateTask={handleUpdateTask}
               categoryColors={categoryColors}
               categories={categories}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <TaskPlanner
+                tasks={tasks}
+                onAddTask={handleAddTask}
+                onDeleteTask={handleDeleteTask}
+                onReorderTasks={handleReorderTasks}
+                onUpdatePoints={handleUpdatePoints}
+                onUpdateTask={handleUpdateTask}
+                categoryColors={categoryColors}
+                categories={categories}
+              />
+            </div>
+            <TodayCompletionTimeline
+              tasks={tasks}
+              categoryColors={categoryColors}
             />
           </div>
         </div>
