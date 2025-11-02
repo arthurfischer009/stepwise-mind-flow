@@ -8,7 +8,6 @@ import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
-import { Timeline } from "@/components/Timeline";
 import { MorningRitual } from "@/components/MorningRitual";
 import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
@@ -1095,14 +1094,6 @@ const Index = () => {
                   </div>
                 );
               })()}
-            </div>
-
-            {/* Timeline - Full width */}
-            <div className="xl:col-span-3 lg:col-span-2">
-              <Timeline 
-                tasks={tasks}
-                categoryColors={categoryColors}
-              />
             </div>
           </div>
           
