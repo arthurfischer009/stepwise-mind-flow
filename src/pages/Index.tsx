@@ -18,7 +18,7 @@ import { DashboardGrid } from "@/components/DashboardGrid";
 import { useToast } from "@/hooks/use-toast";
 import { useComboSystem } from "@/hooks/useComboSystem";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, RefreshCw } from "lucide-react";
+import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, RefreshCw, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -849,6 +849,19 @@ const Index = () => {
           </div>
           <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
         </header>
+
+        {/* Mobile quick add when no upcoming task */}
+        {tasks.filter(t => !t.completed).length === 0 && (
+          <div className="md:hidden mb-3">
+            <div className="rounded-xl bg-card/70 border border-border p-3 text-center">
+              <p className="text-sm text-muted-foreground mb-2">No upcoming task. Add one to get started.</p>
+              <Button onClick={() => setShowPlanningDialog(true)} size="sm" className="gap-2">
+                <Plus className="w-4 h-4" /> Add Task
+              </Button>
+            </div>
+          </div>
+        )}
+
 
         <DashboardGrid
           storageKey="dashboard-layout"
