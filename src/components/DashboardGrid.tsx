@@ -27,6 +27,7 @@ interface DashboardCard {
 interface DashboardGridProps {
   cards: DashboardCard[];
   className?: string;
+  storageKey?: string;
 }
 
 interface SortableCardProps {
@@ -56,9 +57,9 @@ function SortableCard({ id, children }: SortableCardProps) {
         {...attributes}
         {...listeners}
         className={cn(
-          "absolute -left-8 top-4 p-1 rounded cursor-grab active:cursor-grabbing",
+          "absolute right-2 top-2 p-1 rounded cursor-grab active:cursor-grabbing",
           "opacity-0 group-hover:opacity-100 transition-opacity",
-          "hover:bg-accent z-10"
+          "bg-background/70 border border-border hover:bg-accent z-10"
         )}
       >
         <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -68,7 +69,7 @@ function SortableCard({ id, children }: SortableCardProps) {
   );
 }
 
-export function DashboardGrid({ cards, className }: DashboardGridProps) {
+export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrder' }: DashboardGridProps) {
   const [items, setItems] = useState(cards);
 
   const sensors = useSensors(
@@ -80,7 +81,7 @@ export function DashboardGrid({ cards, className }: DashboardGridProps) {
 
   // Load saved order from localStorage
   useEffect(() => {
-    const savedOrder = localStorage.getItem('dashboardCardOrder');
+    const savedOrder = localStorage.getItem(storageKey);
     if (savedOrder) {
       try {
         const orderIds: string[] = JSON.parse(savedOrder);
@@ -97,7 +98,7 @@ export function DashboardGrid({ cards, className }: DashboardGridProps) {
     } else {
       setItems(cards);
     }
-  }, []);
+  }, [storageKey, cards]);
 
   // Update items when cards change
   useEffect(() => {
@@ -119,7 +120,7 @@ export function DashboardGrid({ cards, className }: DashboardGridProps) {
         
         // Save order to localStorage
         localStorage.setItem(
-          'dashboardCardOrder',
+          storageKey,
           JSON.stringify(newOrder.map(item => item.id))
         );
         

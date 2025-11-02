@@ -777,6 +777,7 @@ const Index = () => {
 
         <div className="grid lg:grid-cols-2 gap-4 mb-4">
           <DashboardGrid
+            storageKey="dashboard-left"
             cards={[
               {
                 id: 'progress-stats',
@@ -828,6 +829,7 @@ const Index = () => {
           />
 
           <DashboardGrid
+            storageKey="dashboard-right"
             cards={[
               {
                 id: 'task-planner',
