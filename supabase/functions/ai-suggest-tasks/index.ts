@@ -16,18 +16,24 @@ serve(async (req) => {
     
     console.log('Analyzing completed tasks:', completedTasks?.length || 0);
 
-    // Analyze task frequency
-    const taskFrequency = new Map<string, { count: number; category: string }>();
+    // Analyze task frequency and average points
+    const taskFrequency = new Map<string, { count: number; category: string; totalPoints: number; pointsCount: number }>();
     
     (completedTasks || []).forEach((task: any) => {
       const normalized = task.title.toLowerCase().trim();
       const existing = taskFrequency.get(normalized);
+      const points = task.points || 1;
+      
       if (existing) {
         existing.count++;
+        existing.totalPoints += points;
+        existing.pointsCount++;
       } else {
         taskFrequency.set(normalized, { 
           count: 1, 
-          category: task.category || 'General' 
+          category: task.category || 'General',
+          totalPoints: points,
+          pointsCount: 1
         });
       }
     });
@@ -41,7 +47,8 @@ serve(async (req) => {
           t.title.toLowerCase().trim() === title
         )?.title || title,
         category: data.category,
-        repeatCount: data.count
+        repeatCount: data.count,
+        points: Math.round(data.totalPoints / data.pointsCount)
       }));
 
     console.log('Generated suggestions:', suggestions.length);

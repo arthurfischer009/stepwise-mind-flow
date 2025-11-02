@@ -325,7 +325,7 @@ const Index = () => {
 
   const currentStreak = calculateStreak();
 
-  const handleAddTask = async (title: string, category?: string) => {
+  const handleAddTask = async (title: string, category?: string, points: number = 1) => {
     try {
       if (!user) {
         toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
@@ -352,7 +352,7 @@ const Index = () => {
       const promises = [
         supabase
           .from('tasks')
-          .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points: 1, user_id: user.id })
+          .insert({ title, category, completed: false, sort_order: maxSortOrder + 1, points, user_id: user.id })
           .select()
           .single()
       ];

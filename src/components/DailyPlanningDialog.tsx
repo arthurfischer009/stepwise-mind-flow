@@ -32,11 +32,12 @@ interface AISuggestion {
   title: string;
   category: string;
   repeatCount: number;
+  points: number;
 }
 
 interface DailyPlanningDialogProps {
   tasks: Task[];
-  onAddTask: (title: string, category?: string) => void;
+  onAddTask: (title: string, category?: string, points?: number) => void;
   onUpdatePriority: (taskId: string, isPriority: boolean) => void;
   categoryColors: { [key: string]: string };
   categories: Category[];
@@ -60,6 +61,7 @@ export const DailyPlanningDialog = ({
   const [loading, setLoading] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
   const [addedTasks, setAddedTasks] = useState<Array<{ title: string; time: string }>>([]);
+  const [selectedPoints, setSelectedPoints] = useState(1);
   const { toast } = useToast();
 
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -73,6 +75,13 @@ export const DailyPlanningDialog = ({
       loadSuggestions();
     }
   }, [open, isUnlocked]);
+
+  // Reset points when suggestion changes
+  useEffect(() => {
+    if (currentSuggestion) {
+      setSelectedPoints(currentSuggestion.points || 1);
+    }
+  }, [currentIndex, suggestions]);
 
   const loadSuggestions = async () => {
     setLoading(true);
@@ -92,7 +101,8 @@ export const DailyPlanningDialog = ({
         body: {
           completedTasks: completedTasks.map(t => ({ 
             title: t.title, 
-            category: t.category 
+            category: t.category,
+            points: t.points || 1
           })),
         }
       });
@@ -135,7 +145,7 @@ export const DailyPlanningDialog = ({
         };
         
         const timeLabel = timeLabels[time];
-        onAddTask(current.title, current.category);
+        onAddTask(current.title, current.category, selectedPoints);
         setAddedTasks(prev => [...prev, { title: current.title, time: timeLabel }]);
       }
 
@@ -266,6 +276,25 @@ export const DailyPlanningDialog = ({
                       {currentSuggestion.category}
                     </Badge>
                   )}
+
+                  {/* Points Selector */}
+                  <div className="pt-4 space-y-2">
+                    <label className="text-sm font-medium">Punkte für diese Aufgabe:</label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 5, 8].map((points) => (
+                        <Button
+                          key={points}
+                          variant={selectedPoints === points ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedPoints(points)}
+                          disabled={swipeDirection !== null}
+                          className="w-12 h-12 rounded-full"
+                        >
+                          {points}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="text-sm text-muted-foreground pt-4">
                     {currentIndex + 1} / {suggestions.length}
