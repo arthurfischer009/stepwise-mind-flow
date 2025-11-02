@@ -6,6 +6,8 @@ import { ProgressStats } from "@/components/ProgressStats";
 import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
+import { AchievementProgress } from "@/components/AchievementProgress";
+import { MilestoneReward } from "@/components/MilestoneReward";
 import { ComboCounter } from "@/components/ComboCounter";
 import { FloatingXP } from "@/components/FloatingXP";
 import { SoundToggle } from "@/components/SoundToggle";
@@ -57,6 +59,7 @@ import {
   playXPGain,
   playError 
 } from "@/lib/sounds";
+import { createParticleBurst, screenShake } from "@/lib/particles";
 
 interface Task {
   id: string;
@@ -89,6 +92,7 @@ const Index = () => {
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [floatingXPs, setFloatingXPs] = useState<Array<{ id: string; xp: number; multiplier: number }>>([]);
+  const [showMilestone, setShowMilestone] = useState<number | null>(null);
   const { toast } = useToast();
   const { combo, multiplier, addCombo, resetCombo } = useComboSystem();
 
@@ -471,8 +475,9 @@ const Index = () => {
         t.id === currentTask.id ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
       );
       
+      const newLevel = level + 1;
       setTasks(updatedTasks);
-      setLevel((prev) => prev + 1);
+      setLevel(newLevel);
       
       // Add combo and get multiplier
       const currentMultiplier = addCombo();
@@ -480,6 +485,19 @@ const Index = () => {
       // Calculate XP with multiplier
       const baseXP = currentTask.points || 1;
       const bonusXP = Math.round(baseXP * (currentMultiplier - 1));
+      
+      // Create particle burst at button location
+      const completeButton = document.querySelector('button:has(.lucide-check-circle-2)');
+      if (completeButton) {
+        const rect = completeButton.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const categoryColor = currentTask.category ? categoryColors[currentTask.category] : 'hsl(var(--primary))';
+        createParticleBurst(centerX, centerY, categoryColor);
+      }
+      
+      // Screen shake for impact
+      screenShake(200, 3);
       
       // Show floating XP
       const xpId = `xp-${Date.now()}`;
@@ -490,12 +508,18 @@ const Index = () => {
       playLevelComplete();
       playXPGain();
       
+      // Check for milestone rewards (every 10 levels)
+      if (newLevel % 10 === 0) {
+        setShowMilestone(newLevel);
+        playAchievementUnlock('epic');
+      }
+      
       // Check for new achievements
       await checkAndUnlockAchievements(updatedTasks);
       
       const description = bonusXP > 0 
-        ? `Level ${level + 1} • +${baseXP} XP (+${bonusXP} Combo Bonus!)` 
-        : `You've reached Level ${level + 1}`;
+        ? `Level ${newLevel} • +${baseXP} XP (+${bonusXP} Combo Bonus!)` 
+        : `You've reached Level ${newLevel}`;
       
       toast({
         title: "Level Complete! 🎉",
@@ -913,6 +937,20 @@ const Index = () => {
                 <TodayCompletionTimeline
                   tasks={tasks}
                   categoryColors={categoryColors}
+                />
+              ),
+            },
+            {
+              id: 'achievement-progress',
+              column: 'left',
+              component: (
+                <AchievementProgress
+                  totalCompleted={tasks.filter(t => t.completed).length}
+                  currentStreak={currentStreak}
+                  totalPoints={totalPoints}
+                  completedToday={completedToday}
+                  categories={[...new Set(tasks.map(t => t.category).filter(Boolean) as string[])]}
+                  unlockedAchievements={unlockedAchievements}
                 />
               ),
             },
@@ -1501,6 +1539,13 @@ const Index = () => {
           onComplete={() => setFloatingXPs(prev => prev.filter(fx => fx.id !== id))}
         />
       ))}
+      
+      {showMilestone && (
+        <MilestoneReward 
+          level={showMilestone}
+          onClose={() => setShowMilestone(null)}
+        />
+      )}
     </div>
   );
 };
