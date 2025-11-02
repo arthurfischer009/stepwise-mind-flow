@@ -73,9 +73,9 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
                 value={category || "none"}
                 onChange={(e) => setCategory(e.target.value === "none" ? "" : e.target.value)}
               >
-                <option value="none">No category</option>
+                <option value="none">⚪ No category</option>
                 {categories.map((cat) => (
-                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                  <option key={cat.name} value={cat.name}>● {cat.name}</option>
                 ))}
               </select>
             ) : (

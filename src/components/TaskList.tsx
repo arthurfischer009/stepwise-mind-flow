@@ -288,7 +288,7 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                   <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
                 )}
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: categoryColor ? 'white' : 'hsl(var(--muted-foreground))' }}>
                     <Clock className="w-3 h-3" />
                     <span>{format(startTime, 'HH:mm')}</span>
                   </div>
