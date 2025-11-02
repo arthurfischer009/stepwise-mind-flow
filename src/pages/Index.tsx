@@ -798,6 +798,10 @@ const Index = () => {
               categoryColors={categoryColors}
               categories={categories}
             />
+            <TodayCompletionTimeline
+              tasks={tasks}
+              categoryColors={categoryColors}
+            />
           </div>
 
           <div className="space-y-4">
@@ -818,10 +822,6 @@ const Index = () => {
               suggestions={suggestions}
               onSuggestionsChange={setSuggestions}
               onAddTask={handleAddTask}
-              categoryColors={categoryColors}
-            />
-            <TodayCompletionTimeline
-              tasks={tasks}
               categoryColors={categoryColors}
             />
           </div>
