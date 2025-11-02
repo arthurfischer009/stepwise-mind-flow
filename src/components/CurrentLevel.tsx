@@ -60,10 +60,13 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor, categorie
           <span className="text-[10px]">(45 min)</span>
         </div>
         {onUpdateCategory && categories.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
             <Select
               value={task.category || "none"}
-              onValueChange={(value) => onUpdateCategory(task.id, value === "none" ? undefined : value)}
+              onValueChange={(value) => {
+                const newCategory = value === "none" ? undefined : value;
+                onUpdateCategory(task.id, newCategory);
+              }}
             >
               <SelectTrigger 
                 className="w-[200px] h-8 text-xs mx-auto"
@@ -73,17 +76,23 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor, categorie
                 }}
               >
                 <Tag className="w-3 h-3 mr-1.5" />
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {task.category || "No category"}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-card border border-border shadow-lg z-[100]">
-                <SelectItem value="none" className="text-xs">
+              <SelectContent 
+                className="bg-popover border border-border shadow-xl z-[9999]"
+                position="popper"
+                sideOffset={5}
+              >
+                <SelectItem value="none" className="text-xs cursor-pointer">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-muted" />
                     No category
                   </div>
                 </SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.name} value={cat.name} className="text-xs">
+                  <SelectItem key={cat.name} value={cat.name} className="text-xs cursor-pointer">
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full" 
