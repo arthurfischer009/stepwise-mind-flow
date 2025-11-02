@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TaskList } from "./TaskList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Task {
   id: string;
@@ -38,6 +39,7 @@ interface TaskPlannerProps {
 export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, onUpdateTask, categoryColors, categories = [] }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
+  const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,40 +67,54 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
             className="flex-1 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
           <div onClick={(e) => e.stopPropagation()}>
-            <Select
-              value={category || "none"}
-              onValueChange={(value) => setCategory(value === "none" ? "" : value)}
-            >
-              <SelectTrigger 
-                className="w-36 h-9 text-sm bg-card border-border"
+            {isMobile ? (
+              <select
+                className="w-36 h-9 text-sm bg-card border border-border rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+                value={category || "none"}
+                onChange={(e) => setCategory(e.target.value === "none" ? "" : e.target.value)}
               >
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent 
-                className="bg-popover border border-border shadow-xl z-[9999]"
-                position="popper"
-                sideOffset={5}
-                onCloseAutoFocus={(e) => e.preventDefault()}
-              >
-                <SelectItem value="none" className="text-xs cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-muted" />
-                    No category
-                  </div>
-                </SelectItem>
+                <option value="none">No category</option>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.name} value={cat.name} className="text-xs cursor-pointer">
+                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+            ) : (
+              <Select
+                value={category || "none"}
+                onValueChange={(value) => setCategory(value === "none" ? "" : value)}
+              >
+                <SelectTrigger
+                  type="button"
+                  className="w-36 h-9 text-sm bg-card border-border"
+                >
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-popover border border-border shadow-xl z-[9999]"
+                  position="popper"
+                  sideOffset={5}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <SelectItem value="none" className="text-xs cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      {cat.name}
+                      <div className="w-3 h-3 rounded-full bg-muted" />
+                      No category
                     </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.name} value={cat.name} className="text-xs cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        {cat.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <Button
             type="submit"
