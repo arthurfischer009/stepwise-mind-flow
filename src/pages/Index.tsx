@@ -643,6 +643,10 @@ const Index = () => {
   };
 
   const handleUpdateCategory = async (id: string, category: string | undefined) => {
+    // Optimistic update to avoid UI jump/flicker
+    const prevTasks = tasks;
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
+
     try {
       const { error } = await supabase
         .from('tasks')
@@ -651,20 +655,18 @@ const Index = () => {
 
       if (error) throw error;
 
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, category } : t))
-      );
-      
       toast({
-        title: "Category Updated",
-        description: category ? `Task assigned to ${category}` : "Category removed",
+        title: 'Category Updated',
+        description: category ? `Task assigned to ${category}` : 'Category removed',
       });
     } catch (error: any) {
       console.error('Error updating category:', error);
+      // Revert on error
+      setTasks(prevTasks);
       toast({
-        title: "Error",
-        description: "Failed to update category",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update category',
+        variant: 'destructive',
       });
     }
   };

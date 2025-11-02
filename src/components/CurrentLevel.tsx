@@ -76,14 +76,13 @@ export const CurrentLevel = ({ task, onComplete, level, categoryColor, categorie
                 }}
               >
                 <Tag className="w-3 h-3 mr-1.5" />
-                <SelectValue placeholder="Select category">
-                  {task.category || "No category"}
-                </SelectValue>
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent 
                 className="bg-popover border border-border shadow-xl z-[9999]"
                 position="popper"
                 sideOffset={5}
+                onCloseAutoFocus={(e) => e.preventDefault()}
               >
                 <SelectItem value="none" className="text-xs cursor-pointer">
                   <div className="flex items-center gap-2">
