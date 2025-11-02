@@ -242,11 +242,12 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
-      // Ensure all data is assigned to current user (dev/single-user safety)
+      // Ensure all data is assigned to current user and visible
       try {
         await supabase.rpc('reassign_all_tasks_to_current_user');
+        console.log('Successfully reassigned all data');
       } catch (reassignErr) {
-        console.log('Note: could not reassign tasks:', reassignErr);
+        console.error('Could not reassign tasks:', reassignErr);
       }
 
       // Load tasks
