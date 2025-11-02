@@ -701,6 +701,15 @@ const Index = () => {
             <AchievementsPanel unlockedAchievements={unlockedAchievements} />
             <SoundToggle />
             <Button
+              onClick={() => setShowMorningRitual(true)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Star className="w-4 h-4" />
+              Morning
+            </Button>
+            <Button
               onClick={() => navigate('/categories')}
               variant="outline"
               size="sm"
