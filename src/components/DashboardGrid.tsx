@@ -30,6 +30,8 @@ interface DashboardGridProps {
   cards: DashboardCard[];
   className?: string;
   storageKey?: string;
+  leftBanner?: React.ReactNode;
+  rightBanner?: React.ReactNode;
 }
 
 interface SortableCardProps {
@@ -71,7 +73,7 @@ function SortableCard({ id, children }: SortableCardProps) {
   );
 }
 
-export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrder' }: DashboardGridProps) {
+export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrder', leftBanner, rightBanner }: DashboardGridProps) {
   const [items, setItems] = useState(cards);
 
   const sensors = useSensors(
@@ -180,6 +182,9 @@ export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrd
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-4">
+            {leftBanner && (
+              <div>{leftBanner}</div>
+            )}
             {leftCards.map((item) => (
               <SortableCard key={item.id} id={item.id}>
                 {item.component}
@@ -193,6 +198,9 @@ export function DashboardGrid({ cards, className, storageKey = 'dashboardCardOrd
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-4">
+            {rightBanner && (
+              <div>{rightBanner}</div>
+            )}
             {rightCards.map((item) => (
               <SortableCard key={item.id} id={item.id}>
                 {item.component}

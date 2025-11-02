@@ -922,6 +922,11 @@ const Index = () => {
 
         <DashboardGrid
           storageKey="dashboard-layout"
+          rightBanner={tasks.filter(t => !t.completed).length === 0 ? (
+            <div className="rounded-lg bg-muted/50 border border-border p-2 text-sm text-muted-foreground text-center">
+              No tasks
+            </div>
+          ) : null}
           cards={[
             {
               id: 'progress-stats',
