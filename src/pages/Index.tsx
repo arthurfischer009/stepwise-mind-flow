@@ -252,9 +252,28 @@ const Index = () => {
 
       if (tasksError) throw tasksError;
 
-      console.log('Loaded tasks:', tasksData?.length || 0);
-      setTasks(tasksData || []);
-      setLevel(1 + (tasksData?.filter(t => t.completed).length || 0));
+      // If no tasks returned, try to claim orphaned tasks (mobile safety)
+      if (!tasksData || tasksData.length === 0) {
+        try {
+          await supabase.rpc('claim_orphaned_tasks');
+          const { data: retryTasks } = await supabase
+            .from('tasks')
+            .select('*')
+            .order('sort_order', { ascending: true })
+            .order('created_at', { ascending: true });
+          if (retryTasks) {
+            console.log('Loaded tasks after claim:', retryTasks.length);
+            setTasks(retryTasks);
+            setLevel(1 + (retryTasks.filter(t => t.completed).length || 0));
+          }
+        } catch (e) {
+          console.warn('Auto-claim failed:', e);
+        }
+      } else {
+        console.log('Loaded tasks:', tasksData.length);
+        setTasks(tasksData);
+        setLevel(1 + (tasksData.filter(t => t.completed).length || 0));
+      }
 
       // Load categories
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -423,8 +442,8 @@ const Index = () => {
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast({
-        title: "Error",
-        description: "Failed to add task",
+        title: "Fehler beim Hinzufügen",
+        description: (error && (error as any).message) ? (error as any).message : "Failed to add task",
         variant: "destructive",
       });
     }
