@@ -2,13 +2,6 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TaskList } from "./TaskList";
 
 interface Task {
@@ -64,35 +57,26 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
             placeholder="What's your next challenge?"
             className="flex-1 bg-card border-border focus:border-primary transition-colors h-9 text-sm"
           />
-          <Select
-            value={category || "none"}
-            onValueChange={(value) => setCategory(value === "none" ? "" : value)}
-          >
-            <SelectTrigger 
-              className="w-36 h-9 text-sm bg-card border-border"
-            >
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border border-border shadow-lg z-[100]">
-              <SelectItem value="none" className="text-xs hover:bg-accent">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted" />
-                  No category
-                </div>
-              </SelectItem>
+          <div className="relative w-36">
+            <Input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Category"
+              list="categories-list"
+              className="w-full h-9 text-sm bg-card border-border focus:border-primary transition-colors"
+            />
+            <datalist id="categories-list">
               {categories.map((cat) => (
-                <SelectItem key={cat.name} value={cat.name} className="text-xs hover:bg-accent">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
-                  </div>
-                </SelectItem>
+                <option key={cat.name} value={cat.name} />
               ))}
-            </SelectContent>
-          </Select>
+            </datalist>
+            {category && categories.find(c => c.name === category) && (
+              <div
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full pointer-events-none"
+                style={{ backgroundColor: categoryColors[category] }}
+              />
+            )}
+          </div>
           <Button
             type="submit"
             size="sm"
