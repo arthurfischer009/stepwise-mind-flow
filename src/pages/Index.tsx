@@ -242,12 +242,16 @@ const Index = () => {
 
   const loadTasks = async () => {
     try {
-      // First, try to claim orphaned tasks
+      // One-time reassignment in dev/single-user context to make sure you see your data
       try {
-        await supabase.rpc('claim_orphaned_tasks');
-        console.log('Successfully claimed orphaned tasks');
-      } catch (claimError) {
-        console.log('Note: Could not claim orphaned tasks:', claimError);
+        const alreadyReassigned = localStorage.getItem('reassigned_all_tasks') === 'true';
+        if (!alreadyReassigned) {
+          await supabase.rpc('reassign_all_tasks_to_current_user');
+          localStorage.setItem('reassigned_all_tasks', 'true');
+          console.log('Reassigned all tasks/categories to current user');
+        }
+      } catch (reassignErr) {
+        console.log('Note: could not reassign tasks:', reassignErr);
       }
 
       // Load tasks
@@ -274,9 +278,9 @@ const Index = () => {
     } catch (error: any) {
       console.error('Error loading tasks:', error);
       toast({
-        title: "Error",
-        description: "Failed to load tasks",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load tasks',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);

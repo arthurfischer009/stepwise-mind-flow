@@ -239,6 +239,7 @@ export type Database = {
     }
     Functions: {
       claim_orphaned_tasks: { Args: never; Returns: undefined }
+      reassign_all_tasks_to_current_user: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
