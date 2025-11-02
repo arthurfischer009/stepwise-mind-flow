@@ -12,79 +12,32 @@ serve(async (req) => {
   }
 
   try {
-    const { completedTasks, currentCategories, specificCategory } = await req.json();
+    const { type, existingTasks, categories } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    let systemPrompt: string;
-    let userPrompt: string;
-    let targetCategories: string[];
-
-    if (specificCategory) {
-      // Generate suggestions for a specific category only
-      targetCategories = [specificCategory];
-      
-      systemPrompt = `Du bist ein Produktivitäts-KI-Assistent für Focus Quest. 
-      Analysiere NUR die abgeschlossenen Tasks des Users in der Kategorie "${specificCategory}".
-      
-      ABSOLUTE REGEL: Schlage AUSSCHLIESSLICH Tasks vor, die DIREKTE Fortsetzungen oder minimale Variationen der bereits erledigten Arbeit sind.
-      
-      VERBOTEN:
-      - Neue Themen, Projekte oder Bereiche vorschlagen
-      - Den Umfang erweitern
-      - Kreativ werden oder neue Ideen einbringen
-      
-      ERLAUBT:
-      - Nächste logische Schritte im selben Projekt
-      - Ähnliche Tasks mit leichten Variationen
-      - Vertiefung bestehender Aufgaben`;
-
-      userPrompt = `Abgeschlossene Tasks in "${specificCategory}": ${JSON.stringify(completedTasks)}
-      
-      Schlage 3-5 Tasks vor, die EXAKT in die Richtung der bereits erledigten Tasks gehen.
-      Bleibe strikt im Rahmen dessen, was der User bereits gemacht hat.
-      Alle Vorschläge müssen für "${specificCategory}" sein.`;
-    } else {
-      // Generate suggestions for all top categories
-      const categoryCounts = completedTasks.reduce((acc: Record<string, number>, task: any) => {
-        const cat = task.category || 'Other';
-        acc[cat] = (acc[cat] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      targetCategories = Object.entries(categoryCounts)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
-        .slice(0, 5)
-        .map(([cat]) => cat);
-
-      systemPrompt = `Du bist ein Produktivitäts-KI-Assistent für Focus Quest.
-      Analysiere NUR die abgeschlossenen Tasks des Users.
-      
-      ABSOLUTE REGEL: Schlage für JEDE Top-Kategorie 2-3 Tasks vor, die DIREKTE Fortsetzungen der erledigten Arbeit sind.
-      
-      STRIKT VERBOTEN:
-      - Neue Themen, Projekte oder Bereiche einführen
-      - Kreativ sein oder den Scope erweitern
-      - Ideen vorschlagen, die nicht direkt auf erledigten Tasks basieren
-      
-      ERLAUBT:
-      - Nächste logische Schritte im selben Projekt
-      - Minimale Variationen bestehender Tasks
-      - Vertiefung bereits angefangener Arbeit
-      
-      Maximum 10-15 Vorschläge insgesamt.`;
-
-      userPrompt = `Abgeschlossene Tasks: ${JSON.stringify(completedTasks)}
-      Top aktive Kategorien: ${JSON.stringify(targetCategories)}
-      
-      Für JEDE dieser Kategorien: Schlage 2-3 Follow-up-Tasks vor, die STRIKT den bereits erledigten Tasks ähneln.
-      NUR logische nächste Schritte im SELBEN Projekt/Thema.
-      KEIN Scope-Creep. Bleib bei dem, was bereits gemacht wurde.
-      Max. 10-15 Vorschläge gesamt.`;
+    if (type !== 'suggest') {
+      throw new Error('Invalid request type');
     }
+
+    const systemPrompt = `Du bist ein Produktivitäts-Coach für Focus Quest.
+Deine Aufgabe: Schlage dem User 8-10 konkrete, actionable Tasks vor, die er HEUTE erledigen kann.
+
+WICHTIG:
+- Tasks sollen produktiv und motivierend sein
+- Mische verschiedene Kategorien (${categories.join(', ')})
+- Verschiedene Prioritäten (high, medium, low)
+- Kurz und klar formuliert
+- Erreichbar in einer Sitzung
+
+Basiere die Vorschläge auf den bereits vorhandenen Tasks des Users, aber sei kreativ und schlage auch neue sinnvolle Tasks vor.`;
+
+    const userPrompt = `Vorhandene Tasks: ${JSON.stringify(existingTasks)}
+    
+Schlage 8-10 neue Tasks vor, die der User heute erledigen könnte.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -103,7 +56,7 @@ serve(async (req) => {
             type: 'function',
             function: {
               name: 'suggest_tasks',
-              description: 'Return 2-3 task suggestions per top category, max 10-15 total',
+              description: 'Return 8-10 actionable task suggestions',
               parameters: {
                 type: 'object',
                 properties: {
@@ -114,9 +67,9 @@ serve(async (req) => {
                       properties: {
                         title: { type: 'string' },
                         category: { type: 'string' },
-                        reasoning: { type: 'string' }
+                        priority: { type: 'string', enum: ['low', 'medium', 'high'] }
                       },
-                      required: ['title', 'category', 'reasoning'],
+                      required: ['title', 'category', 'priority'],
                       additionalProperties: false
                     }
                   }
@@ -149,40 +102,9 @@ serve(async (req) => {
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    const rawSuggestions = toolCall ? JSON.parse(toolCall.function.arguments).suggestions : [];
+    const suggestions = toolCall ? JSON.parse(toolCall.function.arguments).suggestions : [];
 
-    // Strict post-filtering: only suggest tasks the user already had before
-    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-    const pastTitles = new Set((completedTasks || []).map((t: any) => normalize(t.title)));
-
-    let filtered = (rawSuggestions || []).filter((s: any) => pastTitles.has(normalize(s.title)));
-
-    // If a specificCategory was requested, enforce it
-    if (specificCategory) {
-      filtered = filtered.filter((s: any) => (s.category || specificCategory) === specificCategory);
-    }
-
-    // Fallback: if nothing left, resurface previous completed tasks (no new ideas)
-    if (!filtered.length) {
-      const seen = new Set<string>();
-      const base = (completedTasks || []).filter((t: any) => specificCategory ? t.category === specificCategory : true);
-      const fallback = [] as any[];
-      for (let i = base.length - 1; i >= 0 && fallback.length < 5; i--) {
-        const title = base[i].title;
-        const key = normalize(title);
-        if (title && !seen.has(key)) {
-          seen.add(key);
-          fallback.push({
-            title,
-            category: base[i].category || (specificCategory || 'Other'),
-            reasoning: 'Aus bereits erledigten Aufgaben erneut vorgeschlagen'
-          });
-        }
-      }
-      filtered = fallback;
-    }
-
-    return new Response(JSON.stringify({ suggestions: filtered }), {
+    return new Response(JSON.stringify({ suggestions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

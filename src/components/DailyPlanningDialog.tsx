@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Star, Clock, Target, Tag } from "lucide-react";
+import { Calendar, ThumbsUp, ThumbsDown, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,19 +9,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { playClick, playPowerUp } from "@/lib/sounds";
-import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { playClick, playPowerUp, playError } from "@/lib/sounds";
 
 interface Task {
   id: string;
@@ -37,6 +28,12 @@ interface Category {
   color: string;
 }
 
+interface AISuggestion {
+  title: string;
+  category: string;
+  priority: "low" | "medium" | "high";
+}
+
 interface DailyPlanningDialogProps {
   tasks: Task[];
   onAddTask: (title: string, category?: string) => void;
@@ -50,295 +47,216 @@ interface DailyPlanningDialogProps {
 export const DailyPlanningDialog = ({
   tasks,
   onAddTask,
-  onUpdatePriority,
   categoryColors,
   categories,
   externalOpen,
   onExternalOpenChange,
 }: DailyPlanningDialogProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [dailyGoal, setDailyGoal] = useState("");
-  
+  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const [addedTasks, setAddedTasks] = useState<string[]>([]);
+  const { toast } = useToast();
+
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = onExternalOpenChange || setInternalOpen;
-  const [quickTasks, setQuickTasks] = useState<Array<{ title: string; category?: string }>>([
-    { title: "", category: undefined },
-    { title: "", category: undefined },
-    { title: "", category: undefined },
-  ]);
-  const [priorityTasks, setPriorityTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Load daily goal from localStorage
-    const saved = localStorage.getItem(`dailyGoal-${format(new Date(), 'yyyy-MM-dd')}`);
-    if (saved) {
-      setDailyGoal(saved);
+    if (open && suggestions.length === 0) {
+      loadSuggestions();
     }
+  }, [open]);
 
-    // Load priority tasks
-    const savedPriorities = tasks.filter(t => t.is_priority).map(t => t.id);
-    setPriorityTasks(new Set(savedPriorities));
-  }, [tasks]);
+  const loadSuggestions = async () => {
+    setLoading(true);
+    try {
+      const pendingTasks = tasks.filter(t => !t.completed);
+      
+      const { data, error } = await supabase.functions.invoke('ai-suggest-tasks', {
+        body: {
+          type: 'suggest',
+          existingTasks: pendingTasks.map(t => ({ title: t.title, category: t.category })),
+          categories: categories.map(c => c.name),
+        }
+      });
 
-  const pendingTasks = tasks.filter(t => !t.completed);
-  const priorityCount = priorityTasks.size;
+      if (error) throw error;
 
-  const handleSavePlan = () => {
-    // Save daily goal
-    if (dailyGoal.trim()) {
-      localStorage.setItem(`dailyGoal-${format(new Date(), 'yyyy-MM-dd')}`, dailyGoal);
-    }
-
-    // Add quick tasks
-    quickTasks.forEach(task => {
-      if (task.title.trim()) {
-        onAddTask(task.title.trim(), task.category);
+      if (data?.suggestions && Array.isArray(data.suggestions)) {
+        setSuggestions(data.suggestions);
+        setCurrentIndex(0);
+        setAddedTasks([]);
+      } else {
+        throw new Error("Invalid response format");
       }
-    });
-
-    // Update priority tasks
-    priorityTasks.forEach(taskId => {
-      onUpdatePriority(taskId, true);
-    });
-
-    playPowerUp();
-    setOpen(false);
-    setQuickTasks([
-      { title: "", category: undefined },
-      { title: "", category: undefined },
-      { title: "", category: undefined },
-    ]);
+    } catch (error: any) {
+      console.error('Error loading suggestions:', error);
+      playError();
+      toast({
+        title: "AI Fehler",
+        description: "Konnte keine Task-Vorschläge laden",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const togglePriority = (taskId: string) => {
-    const newPriorities = new Set(priorityTasks);
-    if (newPriorities.has(taskId)) {
-      newPriorities.delete(taskId);
-      onUpdatePriority(taskId, false);
-    } else {
-      if (newPriorities.size < 5) {
-        newPriorities.add(taskId);
-        onUpdatePriority(taskId, true);
-      }
-    }
-    setPriorityTasks(newPriorities);
+  const handleSwipe = (direction: "left" | "right") => {
+    setSwipeDirection(direction);
     playClick();
+
+    setTimeout(() => {
+      const current = suggestions[currentIndex];
+      
+      if (direction === "right" && current) {
+        // Task hinzufügen
+        onAddTask(current.title, current.category);
+        setAddedTasks(prev => [...prev, current.title]);
+      }
+
+      // Zum nächsten Vorschlag
+      if (currentIndex < suggestions.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        // Alle durch - Dialog schließen
+        playPowerUp();
+        toast({
+          title: "Tag geplant!",
+          description: `${addedTasks.length + (direction === "right" ? 1 : 0)} Tasks hinzugefügt`,
+        });
+        setOpen(false);
+        setSuggestions([]);
+        setCurrentIndex(0);
+      }
+
+      setSwipeDirection(null);
+    }, 300);
   };
 
-  const updateQuickTask = (index: number, field: 'title' | 'category', value: string | undefined) => {
-    const updated = [...quickTasks];
-    if (field === 'title') {
-      updated[index].title = value as string;
-    } else {
-      updated[index].category = value;
+  const currentSuggestion = suggestions[currentIndex];
+  const progress = suggestions.length > 0 ? ((currentIndex + 1) / suggestions.length) * 100 : 0;
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "text-red-500";
+      case "medium": return "text-yellow-500";
+      case "low": return "text-green-500";
+      default: return "text-muted-foreground";
     }
-    setQuickTasks(updated);
-  };
-
-  const addMoreQuickTask = () => {
-    setQuickTasks([...quickTasks, { title: "", category: undefined }]);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="default" 
-          size="sm" 
-          className="gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-        >
-          <Calendar className="w-4 h-4" />
-          <span className="hidden sm:inline">Plan Your Day</span>
-          {priorityCount > 0 && (
-            <Badge variant="secondary" className="ml-1">
-              {priorityCount}
-            </Badge>
-          )}
+        <Button variant="outline" size="icon" className="rounded-full">
+          <Calendar className="w-5 h-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Calendar className="w-6 h-6 text-primary" />
-            Plan Your Day
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Plan your day
           </DialogTitle>
           <DialogDescription>
-            {format(new Date(), 'EEEE, MMMM d, yyyy')} • Focus on what matters most
+            Swipe nach rechts um Tasks hinzuzufügen, nach links um zu überspringen
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
-          {/* Daily Goal */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              <Target className="w-4 h-4 text-primary" />
-              Today's Main Goal
-            </label>
-            <Textarea
-              value={dailyGoal}
-              onChange={(e) => setDailyGoal(e.target.value)}
-              placeholder="What do you want to accomplish today?"
-              className="min-h-[80px] resize-none"
+        <div className="space-y-6">
+          {/* Progress Bar */}
+          <div className="w-full bg-muted rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
             />
           </div>
 
-          {/* Quick Add Tasks */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              <Plus className="w-4 h-4 text-primary" />
-              Quick Add Tasks
-            </label>
-            <div className="space-y-3">
-              {quickTasks.map((task, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={task.title}
-                    onChange={(e) => updateQuickTask(index, 'title', e.target.value)}
-                    placeholder={`Task ${index + 1}...`}
-                    className="flex-1 bg-card"
-                  />
-                  <Select
-                    value={task.category || "none"}
-                    onValueChange={(value) => 
-                      updateQuickTask(index, 'category', value === "none" ? undefined : value)
-                    }
-                  >
-                    <SelectTrigger className="w-40 bg-card">
-                      <div className="flex items-center gap-2">
-                        <Tag className="w-3 h-3" />
-                        <SelectValue placeholder="Category" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border border-border shadow-lg z-[100]">
-                      <SelectItem value="none" className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-muted" />
-                          No category
-                        </div>
-                      </SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.name} value={cat.name} className="text-xs">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: cat.color }}
-                            />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addMoreQuickTask}
-                className="w-full"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add More
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">AI denkt nach...</p>
+            </div>
+          ) : !currentSuggestion ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <Calendar className="w-16 h-16 text-muted-foreground" />
+              <p className="text-muted-foreground">Keine Vorschläge mehr</p>
+              <Button onClick={loadSuggestions} variant="outline" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Neue laden
               </Button>
             </div>
-          </div>
-
-          {/* Priority Selection */}
-          {pendingTasks.length > 0 && (
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold">
-                <Star className="w-4 h-4 text-yellow-500" />
-                Mark as Priority (max 5)
-              </label>
-              <p className="text-xs text-muted-foreground mb-3">
-                Select your most important tasks for today
-              </p>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {pendingTasks.map((task) => {
-                  const isPriority = priorityTasks.has(task.id);
-                  const categoryColor = task.category ? categoryColors[task.category] : undefined;
-
-                  return (
-                    <div
-                      key={task.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                        isPriority 
-                          ? 'bg-yellow-500/10 border-yellow-500/50' 
-                          : 'bg-card border-border hover:border-primary/30'
-                      }`}
-                      onClick={() => togglePriority(task.id)}
+          ) : (
+            <>
+              {/* Task Card */}
+              <div 
+                className={`relative bg-gradient-to-br from-card to-card/50 border-2 rounded-2xl p-8 transition-all duration-300 ${
+                  swipeDirection === "left" ? "translate-x-[-200%] opacity-0 rotate-[-20deg]" :
+                  swipeDirection === "right" ? "translate-x-[200%] opacity-0 rotate-[20deg]" :
+                  "translate-x-0 opacity-100 rotate-0"
+                }`}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-2xl font-bold flex-1">{currentSuggestion.title}</h3>
+                    <Badge 
+                      variant="outline" 
+                      className={getPriorityColor(currentSuggestion.priority)}
                     >
-                      <Checkbox
-                        checked={isPriority}
-                        onCheckedChange={() => togglePriority(task.id)}
-                        className="pointer-events-none"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{task.title}</div>
-                        {task.category && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs mt-1"
-                            style={{ 
-                              borderColor: categoryColor,
-                              color: categoryColor 
-                            }}
-                          >
-                            {task.category}
-                          </Badge>
-                        )}
-                      </div>
-                      {isPriority && (
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
+                      {currentSuggestion.priority}
+                    </Badge>
+                  </div>
+
+                  {currentSuggestion.category && (
+                    <Badge 
+                      style={{ 
+                        backgroundColor: categoryColors[currentSuggestion.category] + '20',
+                        borderColor: categoryColors[currentSuggestion.category],
+                        color: categoryColors[currentSuggestion.category]
+                      }}
+                    >
+                      {currentSuggestion.category}
+                    </Badge>
+                  )}
+
+                  <div className="text-sm text-muted-foreground pt-4">
+                    {currentIndex + 1} / {suggestions.length}
+                  </div>
+                </div>
               </div>
-            </div>
+
+              {/* Swipe Buttons */}
+              <div className="flex items-center justify-center gap-6 pt-4">
+                <Button
+                  onClick={() => handleSwipe("left")}
+                  variant="outline"
+                  size="lg"
+                  className="rounded-full w-16 h-16 border-2 border-red-500/50 hover:bg-red-500/10 hover:border-red-500"
+                  disabled={swipeDirection !== null}
+                >
+                  <ThumbsDown className="w-6 h-6 text-red-500" />
+                </Button>
+
+                <Button
+                  onClick={() => handleSwipe("right")}
+                  size="lg"
+                  className="rounded-full w-20 h-20 text-lg font-semibold"
+                  disabled={swipeDirection !== null}
+                >
+                  <ThumbsUp className="w-8 h-8" />
+                </Button>
+              </div>
+
+              {addedTasks.length > 0 && (
+                <div className="text-center text-sm text-muted-foreground">
+                  {addedTasks.length} Tasks hinzugefügt
+                </div>
+              )}
+            </>
           )}
-
-          {/* Summary */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-sm">Today's Focus</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Priority Tasks:</span>
-                <span className="ml-2 font-bold">{priorityCount}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Quick Adds:</span>
-                <span className="ml-2 font-bold">
-                  {quickTasks.filter(t => t.title.trim()).length}
-                </span>
-              </div>
-            </div>
-            {dailyGoal.trim() && (
-              <div className="mt-2 pt-2 border-t border-primary/20">
-                <span className="text-xs text-muted-foreground">Goal:</span>
-                <p className="text-sm mt-1 font-medium">{dailyGoal}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSavePlan}
-            className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-          >
-            Start Your Day
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
