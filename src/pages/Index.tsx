@@ -654,6 +654,27 @@ const Index = () => {
     }
   };
 
+  const handleRestoreLastCompleted = async () => {
+    try {
+      const lastCompleted = [...tasks]
+        .filter(t => t.completed && t.completed_at)
+        .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())[0];
+      if (!lastCompleted) {
+        toast({ title: "Nothing to restore", description: "No completed tasks found" });
+        return;
+      }
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: false, completed_at: null })
+        .eq('id', lastCompleted.id);
+      if (error) throw error;
+      setTasks(prev => prev.map(t => t.id === lastCompleted.id ? { ...t, completed: false, completed_at: undefined } : t));
+      toast({ title: "Restored", description: `Moved '${lastCompleted.title}' back to queue` });
+    } catch (e) {
+      console.error('Error restoring task:', e);
+      toast({ title: "Error", description: "Failed to restore", variant: "destructive" });
+    }
+  };
   const handleReorderTasks = async (reorderedTasks: Task[]) => {
     try {
       setTasks(reorderedTasks);
@@ -874,14 +895,26 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
         </header>
 
-        {/* Mobile quick add when no upcoming task */}
+        {/* Quick actions when no upcoming task */}
         {tasks.filter(t => !t.completed).length === 0 && (
-          <div className="md:hidden mb-3">
+          <div className="mb-3">
             <div className="rounded-xl bg-card/70 border border-border p-3 text-center">
-              <p className="text-sm text-muted-foreground mb-2">No upcoming task. Add one to get started.</p>
-              <Button onClick={() => setShowPlanningDialog(true)} size="sm" className="gap-2">
-                <Plus className="w-4 h-4" /> Add Task
-              </Button>
+              <p className="text-sm text-muted-foreground mb-2">
+                No upcoming task. {tasks.length > 0 ? `${tasks.filter(t=>t.completed).length} completed` : 'Add one to get started.'}
+              </p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Button onClick={() => setShowPlanningDialog(true)} size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" /> Add Task
+                </Button>
+                {tasks.filter(t => t.completed).length > 0 && (
+                  <Button onClick={handleRestoreLastCompleted} variant="outline" size="sm" className="gap-2">
+                    Restore last
+                  </Button>
+                )}
+                <Button onClick={handleSyncData} variant="outline" size="sm" disabled={syncing} className="gap-2">
+                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync
+                </Button>
+              </div>
             </div>
           </div>
         )}
