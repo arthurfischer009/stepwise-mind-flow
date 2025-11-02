@@ -444,9 +444,12 @@ const Index = () => {
         title: "Task Added",
         description: "New challenge accepted!",
       });
-      
+
       // Play sound effect
       playTaskAdded();
+
+      // Force reload to ensure UI is in sync
+      await loadTasks();
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast({
