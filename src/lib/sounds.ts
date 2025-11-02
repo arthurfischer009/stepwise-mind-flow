@@ -8,6 +8,17 @@ class SoundManager {
     // Initialize on first user interaction
     if (typeof window !== 'undefined') {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Resume context on any user interaction (required for mobile)
+      const resumeContext = () => {
+        if (this.audioContext?.state === 'suspended') {
+          this.audioContext.resume();
+        }
+      };
+      
+      ['touchstart', 'touchend', 'mousedown', 'keydown'].forEach(event => {
+        document.addEventListener(event, resumeContext, { once: true });
+      });
     }
   }
 
@@ -19,6 +30,13 @@ class SoundManager {
 
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
+  }
+
+  // Haptic feedback for mobile
+  private vibrate(pattern: number | number[]) {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
+    }
   }
 
   // Play a simple beep with customizable frequency and duration
@@ -47,6 +65,7 @@ class SoundManager {
   playLevelComplete() {
     if (!this.audioContext) return;
     
+    this.vibrate([50, 30, 50]); // Success pattern
     const now = this.audioContext.currentTime;
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
     
@@ -58,6 +77,15 @@ class SoundManager {
   // Achievement Unlocked - Triumphant fanfare
   playAchievementUnlock(rarity: string = 'common') {
     if (!this.audioContext) return;
+    
+    // Haptic pattern based on rarity
+    const hapticPatterns: Record<string, number[]> = {
+      legendary: [100, 50, 100, 50, 100],
+      epic: [80, 40, 80, 40],
+      rare: [60, 30, 60],
+      common: [40, 20, 40]
+    };
+    this.vibrate(hapticPatterns[rarity] || hapticPatterns.common);
     
     const now = this.audioContext.currentTime;
     let notes: number[] = [];
@@ -87,6 +115,7 @@ class SoundManager {
   playTaskAdded() {
     if (!this.audioContext) return;
     
+    this.vibrate(10); // Light haptic
     this.playTone(659.25, 0.1, 'sine', 0.2); // E5
     setTimeout(() => this.playTone(783.99, 0.1, 'sine', 0.2), 50); // G5
   }
@@ -120,6 +149,7 @@ class SoundManager {
   playClick() {
     if (!this.audioContext) return;
     
+    this.vibrate(5); // Very light haptic
     this.playTone(800, 0.05, 'square', 0.1);
   }
 
