@@ -11,14 +11,21 @@ export const FloatingXP = ({ xp, multiplier = 1, onComplete }: FloatingXPProps) 
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => setVisible(true), 50);
-    
-    const timer = setTimeout(() => {
+    const showTimer = setTimeout(() => setVisible(true), 50);
+
+    const hideTimer = setTimeout(() => {
       setVisible(false);
-      setTimeout(onComplete, 300);
     }, 1500);
 
-    return () => clearTimeout(timer);
+    const completeTimer = setTimeout(() => {
+      onComplete();
+    }, 1800);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+      clearTimeout(completeTimer);
+    };
   }, [onComplete]);
 
   const totalXP = Math.round(xp * multiplier);

@@ -14,6 +14,8 @@ export function withAlphaHsl(color: string, alpha: number): string {
       const [, h, s, l] = match;
       return `hsla(${h}, ${s}%, ${l}%, ${alpha})`;
     }
-  } catch {}
+  } catch {
+    // Failed to parse HSL color, fall back to original
+  }
   return color;
 }

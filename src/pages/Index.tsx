@@ -174,9 +174,9 @@ const Index = () => {
   const checkDailyLogin = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      
+
       // Get or create user stats
-      let { data: stats, error: fetchError } = await supabase
+      const { data: stats, error: fetchError } = await supabase
         .from('user_stats')
         .select('*')
         .eq('user_id', user?.id)
@@ -353,7 +353,6 @@ const Index = () => {
     if (completedTasks.length === 0) return 0;
 
     let streak = 0;
-    let currentDate = new Date();
     
     // Check each previous day
     for (let dayOffset = 0; dayOffset < 365; dayOffset++) {
