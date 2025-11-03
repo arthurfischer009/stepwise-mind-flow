@@ -564,21 +564,30 @@ const Index = () => {
       const taskToDelete = tasks.find(t => t.id === id);
       if (!taskToDelete) return;
 
+      // Check if we're locked in (either via database or localStorage)
+      const today = new Date().toISOString().split('T')[0];
+      const isLockedIn = lockInSessionId || localStorage.getItem(`lock_in_${today}`);
+
       // Log deleted task if we're locked in
-      if (lockInSessionId) {
+      if (isLockedIn) {
         const penaltyPoints = -(taskToDelete.points || 1) * 2; // Double negative penalty
 
-        await supabase
-          .from('deleted_tasks_log')
-          .insert({
-            user_id: user?.id,
-            task_title: taskToDelete.title,
-            task_category: taskToDelete.category,
-            task_points: taskToDelete.points || 1,
-            lock_in_session_id: lockInSessionId,
-            was_after_lock_in: true,
-            penalty_points: penaltyPoints,
-          });
+        // Try to log to database, but continue even if it fails
+        try {
+          await supabase
+            .from('deleted_tasks_log')
+            .insert({
+              user_id: user?.id,
+              task_title: taskToDelete.title,
+              task_category: taskToDelete.category,
+              task_points: taskToDelete.points || 1,
+              lock_in_session_id: lockInSessionId || today,
+              was_after_lock_in: true,
+              penalty_points: penaltyPoints,
+            });
+        } catch (logError) {
+          console.error('Failed to log deletion, continuing anyway:', logError);
+        }
 
         toast({
           title: "⚠️ Task Deleted After Lock-In",
