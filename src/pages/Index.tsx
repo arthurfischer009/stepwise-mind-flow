@@ -8,6 +8,10 @@ import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationToggle } from "@/components/NotificationToggle";
+import { LockInButton } from "@/components/LockInButton";
+import { TaskTimer } from "@/components/TaskTimer";
+import { LockInMetrics } from "@/components/LockInMetrics";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { MorningRitual } from "@/components/MorningRitual";
@@ -86,6 +90,7 @@ const Index = () => {
   const [yesterdayCompleted, setYesterdayCompleted] = useState(0);
   const [planningUnlocked, setPlanningUnlocked] = useState(false);
   const [showAchievementsSheet, setShowAchievementsSheet] = useState(false);
+  const [lockInSessionId, setLockInSessionId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Check if "Plan your day" feature should be unlocked
@@ -556,6 +561,33 @@ const Index = () => {
 
   const handleDeleteTask = async (id: string) => {
     try {
+      const taskToDelete = tasks.find(t => t.id === id);
+      if (!taskToDelete) return;
+
+      // Log deleted task if we're locked in
+      if (lockInSessionId) {
+        const penaltyPoints = -(taskToDelete.points || 1) * 2; // Double negative penalty
+
+        await supabase
+          .from('deleted_tasks_log')
+          .insert({
+            user_id: user?.id,
+            task_title: taskToDelete.title,
+            task_category: taskToDelete.category,
+            task_points: taskToDelete.points || 1,
+            lock_in_session_id: lockInSessionId,
+            was_after_lock_in: true,
+            penalty_points: penaltyPoints,
+          });
+
+        toast({
+          title: "⚠️ Task Deleted After Lock-In",
+          description: `You lost ${Math.abs(penaltyPoints)} points for deleting a committed task!`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -564,7 +596,7 @@ const Index = () => {
       if (error) throw error;
 
       setTasks((prev) => prev.filter((t) => t.id !== id));
-      
+
       playTaskDeleted();
     } catch (error: any) {
       console.error('Error deleting task:', error);
@@ -765,6 +797,12 @@ const Index = () => {
                 completedCount={tasks.filter(t => t.completed).length}
               />
               <AchievementsPanel unlockedAchievements={unlockedAchievements} />
+              <LockInButton
+                tasks={tasks}
+                userId={user?.id}
+                onLockIn={setLockInSessionId}
+              />
+              <NotificationToggle />
               <ThemeToggle />
               <SoundToggle />
               <Button
@@ -823,6 +861,14 @@ const Index = () => {
                 onUpdateCategory={handleUpdateCategory}
               />
             </div>
+            {currentTask && (
+              <div className="rounded-2xl bg-card border border-border p-4">
+                <TaskTimer
+                  task={currentTask}
+                  userId={user?.id}
+                />
+              </div>
+            )}
             <ProgressStats
               level={level}
               completedToday={completedToday}
@@ -1393,8 +1439,13 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Lock-In & Timer Metrics */}
+        <div className="mt-8">
+          <LockInMetrics userId={user?.id} />
+        </div>
       </div>
-      
+
       <MobileBottomNav
         onCategoriesClick={() => navigate('/categories')}
         onAnalyticsClick={() => navigate('/analytics')}
