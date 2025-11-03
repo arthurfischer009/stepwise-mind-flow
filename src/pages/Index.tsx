@@ -329,7 +329,7 @@ const Index = () => {
 
   const currentStreak = calculateStreak();
 
-  const handleAddTask = async (title: string, category?: string, points: number = 1, timePeriod?: string) => {
+  const handleAddTask = async (title: string, category?: string, points: number = 1) => {
     try {
       if (!user) {
         toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
@@ -362,8 +362,7 @@ const Index = () => {
             completed: false, 
             sort_order: maxSortOrder + 1, 
             points, 
-            user_id: user.id,
-            time_period: timePeriod 
+            user_id: user.id
           })
           .select()
           .single()

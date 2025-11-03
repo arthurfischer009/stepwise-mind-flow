@@ -16,9 +16,9 @@ export const TIME_PERIODS: TimePeriodInfo[] = [
     id: 'morning',
     label: 'Morning',
     icon: '🌅',
-    timeRange: '5:00 - 12:00',
+    timeRange: '5:00 - 10:00',
     startHour: 5,
-    endHour: 12,
+    endHour: 10,
     color: 'hsl(43, 100%, 70%)',
     urgencyColor: 'hsl(43, 100%, 50%)',
   },
@@ -26,9 +26,9 @@ export const TIME_PERIODS: TimePeriodInfo[] = [
     id: 'day',
     label: 'Day',
     icon: '☀️',
-    timeRange: '12:00 - 17:00',
-    startHour: 12,
-    endHour: 17,
+    timeRange: '10:00 - 16:00',
+    startHour: 10,
+    endHour: 16,
     color: 'hsl(200, 90%, 60%)',
     urgencyColor: 'hsl(200, 90%, 45%)',
   },
@@ -36,8 +36,8 @@ export const TIME_PERIODS: TimePeriodInfo[] = [
     id: 'evening',
     label: 'Evening',
     icon: '🌆',
-    timeRange: '17:00 - 21:00',
-    startHour: 17,
+    timeRange: '16:00 - 21:00',
+    startHour: 16,
     endHour: 21,
     color: 'hsl(25, 95%, 65%)',
     urgencyColor: 'hsl(25, 95%, 50%)',
@@ -60,9 +60,9 @@ export const TIME_PERIODS: TimePeriodInfo[] = [
 export const getCurrentTimePeriod = (): TimePeriod => {
   const hour = new Date().getHours();
   
-  if (hour >= 5 && hour < 12) return 'morning';
-  if (hour >= 12 && hour < 17) return 'day';
-  if (hour >= 17 && hour < 21) return 'evening';
+  if (hour >= 5 && hour < 10) return 'morning';
+  if (hour >= 10 && hour < 16) return 'day';
+  if (hour >= 16 && hour < 21) return 'evening';
   return 'night';
 };
 
@@ -99,6 +99,18 @@ export const getTimeRemainingInPeriod = (): number => {
   
   const minutesRemaining = (endHour * 60) - (currentHour * 60 + currentMinute);
   return minutesRemaining;
+};
+
+/**
+ * Get time period for a specific date/time
+ */
+export const getTimePeriodForDate = (date: Date): TimePeriod => {
+  const hour = date.getHours();
+  
+  if (hour >= 5 && hour < 10) return 'morning';
+  if (hour >= 10 && hour < 16) return 'day';
+  if (hour >= 16 && hour < 21) return 'evening';
+  return 'night';
 };
 
 /**
