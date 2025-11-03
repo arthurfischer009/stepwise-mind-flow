@@ -325,6 +325,10 @@ export type Database = {
           points: number | null
           sort_order: number | null
           time_period: string | null
+          timer_elapsed_seconds: number | null
+          timer_paused_at: string | null
+          timer_started_at: string | null
+          timer_status: string | null
           title: string
           updated_at: string | null
           user_id: string | null
@@ -339,6 +343,10 @@ export type Database = {
           points?: number | null
           sort_order?: number | null
           time_period?: string | null
+          timer_elapsed_seconds?: number | null
+          timer_paused_at?: string | null
+          timer_started_at?: string | null
+          timer_status?: string | null
           title: string
           updated_at?: string | null
           user_id?: string | null
@@ -353,6 +361,10 @@ export type Database = {
           points?: number | null
           sort_order?: number | null
           time_period?: string | null
+          timer_elapsed_seconds?: number | null
+          timer_paused_at?: string | null
+          timer_started_at?: string | null
+          timer_status?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string | null
