@@ -439,6 +439,122 @@ const AnalyticsPage = () => {
       .sort((a, b) => b.value - a.value);
   };
 
+  // Time Period Analytics: Completion by time period
+  const getCompletionByTimePeriod = () => {
+    const timePeriodMap = new Map<string, { completed: number; total: number }>();
+    
+    const timePeriods = [
+      { id: 'morning', label: 'Morning', icon: '🌅', color: 'hsl(43, 100%, 70%)' },
+      { id: 'day', label: 'Day', icon: '☀️', color: 'hsl(200, 90%, 60%)' },
+      { id: 'evening', label: 'Evening', icon: '🌆', color: 'hsl(25, 95%, 65%)' },
+      { id: 'night', label: 'Night', icon: '🌙', color: 'hsl(240, 60%, 50%)' }
+    ];
+
+    timePeriods.forEach(period => {
+      timePeriodMap.set(period.id, { completed: 0, total: 0 });
+    });
+
+    tasks.forEach(task => {
+      if (!task.completed_at) return;
+      const hour = parseISO(task.completed_at).getHours();
+      let period = 'night';
+      if (hour >= 5 && hour < 10) period = 'morning';
+      else if (hour >= 10 && hour < 16) period = 'day';
+      else if (hour >= 16 && hour < 21) period = 'evening';
+      
+      const current = timePeriodMap.get(period) || { completed: 0, total: 0 };
+      timePeriodMap.set(period, {
+        completed: current.completed + (task.completed ? 1 : 0),
+        total: current.total + 1
+      });
+    });
+
+    return timePeriods.map(period => {
+      const data = timePeriodMap.get(period.id) || { completed: 0, total: 0 };
+      return {
+        name: `${period.icon} ${period.label}`,
+        completed: data.completed,
+        rate: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
+        color: period.color
+      };
+    });
+  };
+
+  // Time Period Analytics: Points by time period
+  const getPointsByTimePeriod = () => {
+    const timePeriodMap = new Map<string, number>();
+    
+    const timePeriods = [
+      { id: 'morning', label: 'Morning', icon: '🌅', color: 'hsl(43, 100%, 70%)' },
+      { id: 'day', label: 'Day', icon: '☀️', color: 'hsl(200, 90%, 60%)' },
+      { id: 'evening', label: 'Evening', icon: '🌆', color: 'hsl(25, 95%, 65%)' },
+      { id: 'night', label: 'Night', icon: '🌙', color: 'hsl(240, 60%, 50%)' }
+    ];
+
+    timePeriods.forEach(period => {
+      timePeriodMap.set(period.id, 0);
+    });
+
+    tasks.filter(t => t.completed && t.completed_at).forEach(task => {
+      const hour = parseISO(task.completed_at!).getHours();
+      let period = 'night';
+      if (hour >= 5 && hour < 10) period = 'morning';
+      else if (hour >= 10 && hour < 16) period = 'day';
+      else if (hour >= 16 && hour < 21) period = 'evening';
+      
+      timePeriodMap.set(period, (timePeriodMap.get(period) || 0) + (task.points || 1));
+    });
+
+    return timePeriods.map(period => ({
+      name: `${period.icon} ${period.label}`,
+      points: timePeriodMap.get(period.id) || 0,
+      color: period.color
+    }));
+  };
+
+  // Time Period Analytics: Average tasks per day by period
+  const getAvgTasksByTimePeriod = () => {
+    const timePeriodMap = new Map<string, number[]>();
+    const dayMap = new Map<string, Set<string>>();
+    
+    const timePeriods = [
+      { id: 'morning', label: 'Morning', icon: '🌅', color: 'hsl(43, 100%, 70%)' },
+      { id: 'day', label: 'Day', icon: '☀️', color: 'hsl(200, 90%, 60%)' },
+      { id: 'evening', label: 'Evening', icon: '🌆', color: 'hsl(25, 95%, 65%)' },
+      { id: 'night', label: 'Night', icon: '🌙', color: 'hsl(240, 60%, 50%)' }
+    ];
+
+    timePeriods.forEach(period => {
+      timePeriodMap.set(period.id, []);
+      dayMap.set(period.id, new Set());
+    });
+
+    tasks.filter(t => t.completed && t.completed_at).forEach(task => {
+      const date = parseISO(task.completed_at!);
+      const hour = date.getHours();
+      const dayKey = format(date, 'yyyy-MM-dd');
+      
+      let period = 'night';
+      if (hour >= 5 && hour < 10) period = 'morning';
+      else if (hour >= 10 && hour < 16) period = 'day';
+      else if (hour >= 16 && hour < 21) period = 'evening';
+      
+      dayMap.get(period)?.add(dayKey);
+      timePeriodMap.get(period)?.push(1);
+    });
+
+    return timePeriods.map(period => {
+      const tasks = timePeriodMap.get(period.id) || [];
+      const days = dayMap.get(period.id)?.size || 1;
+      return {
+        name: `${period.icon} ${period.label}`,
+        avgTasks: Math.round((tasks.length / days) * 10) / 10,
+        totalTasks: tasks.length,
+        color: period.color
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -704,6 +820,144 @@ const AnalyticsPage = () => {
                 <Area type="monotone" dataKey="points" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Time Period Performance Section */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Clock className="w-6 h-6 text-primary" />
+            ⏰ Performance by Time Period
+          </h2>
+          
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Time Period: Tasks Completed */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Tasks Completed by Time Period
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={getCompletionByTimePeriod()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12}
+                  />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Bar dataKey="completed" radius={[8, 8, 0, 0]}>
+                    {getCompletionByTimePeriod().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Time Period: XP Earned */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
+                XP Earned by Time Period
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={getPointsByTimePeriod()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12}
+                  />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Bar dataKey="points" radius={[8, 8, 0, 0]}>
+                    {getPointsByTimePeriod().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Time Period: Average Tasks */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Avg Tasks per Day by Period
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={getAvgTasksByTimePeriod()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12}
+                  />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Bar dataKey="avgTasks" radius={[8, 8, 0, 0]}>
+                    {getAvgTasksByTimePeriod().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Time Period: Completion Rate Radar */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4 text-primary" />
+                Completion Rate by Time Period
+              </h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <RadarChart data={getCompletionByTimePeriod()}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis 
+                    dataKey="name" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <PolarRadiusAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    domain={[0, 100]}
+                  />
+                  <Radar 
+                    dataKey="rate" 
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.6}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

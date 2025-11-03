@@ -220,32 +220,75 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
         {groupedTasks.map(({ period, tasks: periodTasks, isActive }) => {
           if (periodTasks.length === 0) return null;
           
+          const motivationMessages: { [key: string]: string[] } = {
+            morning: [
+              "⚡ Start your day strong!",
+              "🌅 Morning energy = Best productivity!",
+              "💪 Tackle these before lunch!",
+              "🔥 Make this morning count!"
+            ],
+            day: [
+              "☀️ Peak performance time!",
+              "🎯 Get these done today!",
+              "⚡ Midday momentum!",
+              "💼 Focus time - let's go!"
+            ],
+            evening: [
+              "🌆 Finish strong today!",
+              "✨ Complete before dinner!",
+              "🏆 Evening push - you got this!",
+              "💫 Wind down with wins!"
+            ],
+            night: [
+              "🌙 Night owl mode activated!",
+              "⭐ Late night productivity!",
+              "🎯 Finish the day right!",
+              "💪 Last push of the day!"
+            ]
+          };
+          
+          const randomMotivation = motivationMessages[period.id]?.[Math.floor(Math.random() * motivationMessages[period.id].length)] || "Let's complete these tasks!";
+          
           return (
             <div key={period.id} className="space-y-2 pb-4 border-b border-border/50 last:border-0">
-              <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 px-1">
-                <div className="flex items-center gap-2 flex-1">
-                  <span className="text-2xl">{period.icon}</span>
-                  <div className="flex flex-col">
-                    <h3 className="text-base font-bold leading-tight" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
-                      {period.label}
-                    </h3>
-                    <span className="text-xs text-muted-foreground">{period.timeRange}</span>
+              <div className="flex flex-col gap-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 px-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-2xl">{period.icon}</span>
+                    <div className="flex flex-col">
+                      <h3 className="text-base font-bold leading-tight" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
+                        {period.label}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{period.timeRange}</span>
+                    </div>
+                    {isActive && (
+                      <span className="text-xs px-2 py-1 rounded-full font-bold animate-pulse" style={{ 
+                        backgroundColor: period.urgencyColor,
+                        color: 'white'
+                      }}>
+                        ACTIVE NOW
+                      </span>
+                    )}
                   </div>
-                  {isActive && (
-                    <span className="text-xs px-2 py-1 rounded-full font-bold animate-pulse" style={{ 
-                      backgroundColor: period.urgencyColor,
-                      color: 'white'
-                    }}>
-                      ACTIVE NOW
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-bold" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
+                      {periodTasks.length}
                     </span>
-                  )}
+                    <span className="text-xs text-muted-foreground">task{periodTasks.length !== 1 ? 's' : ''}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
-                    {periodTasks.length}
-                  </span>
-                  <span className="text-xs text-muted-foreground">task{periodTasks.length !== 1 ? 's' : ''}</span>
-                </div>
+                
+                {/* Motivation Message */}
+                {isActive && (
+                  <div className="px-3 py-2 rounded-lg animate-pulse" style={{ 
+                    backgroundColor: `${period.color}25`,
+                    borderLeft: `3px solid ${period.urgencyColor}`
+                  }}>
+                    <p className="text-xs font-bold" style={{ color: period.urgencyColor }}>
+                      {randomMotivation}
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="space-y-1.5">
