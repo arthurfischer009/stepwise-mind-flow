@@ -19,7 +19,14 @@ import { TodayPointsBreakdown } from "@/components/TodayPointsBreakdown";
 import { TodayCompletionTimeline } from "@/components/TodayCompletionTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap } from "lucide-react";
+import { BarChart3, LogOut, Trophy, Target, Clock, CheckCircle2, Star, TrendingUp, Calendar, Award, Zap, Settings, Menu } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -802,7 +809,7 @@ const Index = () => {
             <p className="text-xs text-muted-foreground">One task. One level. Total focus.</p>
           </div>
 
-          {/* Desktop Header - Full Navigation */}
+          {/* Desktop Header - Compact Navigation */}
           <div className="hidden md:block">
             <div className="flex items-center justify-center gap-3 mb-2">
               <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">
@@ -824,48 +831,61 @@ const Index = () => {
                 userId={user?.id}
                 onLockIn={setLockInSessionId}
               />
-              <NotificationToggle />
-              <ThemeToggle />
-              <SoundToggle />
-              <Button
-                onClick={() => setShowMorningRitual(true)}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Star className="w-4 h-4" />
-                Morning
-              </Button>
-              <Button
-                onClick={() => navigate('/categories')}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Target className="w-4 h-4" />
-                Categories
-              </Button>
-              <Button
-                onClick={() => navigate('/analytics')}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <BarChart3 className="w-4 h-4" />
-                Analytics
-              </Button>
-              <Button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate('/auth');
-                }}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </Button>
+              
+              {/* Compact Menu with all other options */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Menu className="w-4 h-4" />
+                    Menu
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-card border-border z-50">
+                  <DropdownMenuItem onClick={() => setShowMorningRitual(true)}>
+                    <Star className="w-4 h-4 mr-2" />
+                    Morning Ritual
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/categories')}>
+                    <Target className="w-4 h-4 mr-2" />
+                    Categories
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/analytics')}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-sm">Settings</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <div className="px-2 py-1.5 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Theme</span>
+                      <ThemeToggle />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Notifications</span>
+                      <NotificationToggle />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Sound</span>
+                      <SoundToggle />
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      navigate('/auth');
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <p className="text-sm text-muted-foreground">One task. One level. Total focus. • Day resets at 5 AM</p>
           </div>
