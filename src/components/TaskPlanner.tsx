@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { TaskList } from "./TaskList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TIME_PERIODS, TimePeriod } from "@/lib/timePeriods";
 
 interface Task {
   id: string;
@@ -18,6 +19,7 @@ interface Task {
   category?: string;
   completed: boolean;
   points?: number;
+  time_period?: string;
 }
 
 interface Category {
@@ -27,7 +29,7 @@ interface Category {
 
 interface TaskPlannerProps {
   tasks: Task[];
-  onAddTask: (title: string, category?: string) => void;
+  onAddTask: (title: string, category?: string, points?: number, timePeriod?: TimePeriod) => void;
   onDeleteTask: (id: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
   onUpdatePoints: (id: string, points: number) => void;
@@ -39,14 +41,16 @@ interface TaskPlannerProps {
 export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, onUpdatePoints, onUpdateTask, categoryColors, categories = [] }: TaskPlannerProps) => {
   const [newTask, setNewTask] = useState("");
   const [category, setCategory] = useState("");
+  const [timePeriod, setTimePeriod] = useState<TimePeriod | "">("");
   const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTask.trim()) {
-      onAddTask(newTask.trim(), category.trim() || undefined);
+      onAddTask(newTask.trim(), category.trim() || undefined, undefined, timePeriod || undefined);
       setNewTask("");
       setCategory("");
+      setTimePeriod("");
     }
   };
 
@@ -116,6 +120,43 @@ export const TaskPlanner = ({ tasks, onAddTask, onDeleteTask, onReorderTasks, on
                 </SelectContent>
               </Select>
             )}
+            <div onClick={(e) => e.stopPropagation()}>
+              {isMobile ? (
+                <select
+                  className="w-32 h-9 text-xs bg-card border border-border rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+                  value={timePeriod || "none"}
+                  onChange={(e) => setTimePeriod(e.target.value === "none" ? "" : e.target.value as TimePeriod)}
+                >
+                  <option value="none">⏰ Any time</option>
+                  {TIME_PERIODS.map((period) => (
+                    <option key={period.id} value={period.id}>{period.icon} {period.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <Select value={timePeriod || "none"} onValueChange={(value) => setTimePeriod(value === "none" ? "" : value as TimePeriod)}>
+                  <SelectTrigger
+                    type="button"
+                    className="w-32 h-9 text-xs bg-card border-border"
+                  >
+                    <SelectValue placeholder="Time" />
+                  </SelectTrigger>
+                  <SelectContent 
+                    className="bg-popover border border-border shadow-xl z-[9999]"
+                    position="popper"
+                    side="top"
+                    sideOffset={5}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                  >
+                    <SelectItem value="none" className="text-xs cursor-pointer">⏰ Any time</SelectItem>
+                    {TIME_PERIODS.map((period) => (
+                      <SelectItem key={period.id} value={period.id} className="text-xs cursor-pointer">
+                        {period.icon} {period.label} ({period.timeRange})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
           <Button
             type="submit"

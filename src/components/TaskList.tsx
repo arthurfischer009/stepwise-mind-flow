@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
-import { Trash2, GripVertical, Clock, Pencil, Check, X, Star } from "lucide-react";
+import { Trash2, GripVertical, Clock, Pencil, Check, X, Star, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addMinutes } from "date-fns";
+import { TIME_PERIODS, getCurrentTimePeriod, getTimePeriodInfo, formatTimeRemaining, isTimePeriodActive } from "@/lib/timePeriods";
 
 interface Task {
   id: string;
@@ -10,6 +11,7 @@ interface Task {
   completed: boolean;
   points?: number;
   is_priority?: boolean;
+  time_period?: string;
 }
 
 interface TaskListProps {
@@ -179,70 +181,127 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     touchElementRef.current = null;
   };
 
+  // Group tasks by time period
+  const currentPeriod = getCurrentTimePeriod();
+  const groupedTasks = TIME_PERIODS.map(period => ({
+    period,
+    tasks: pendingTasks.filter(t => t.time_period === period.id),
+    isActive: period.id === currentPeriod
+  }));
+  
+  // Tasks without time period
+  const unscheduledTasks = pendingTasks.filter(t => !t.time_period);
+
   return (
-    <div className="space-y-1.5">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Upcoming Levels ({pendingTasks.length})
-      </h3>
-      <div ref={containerRef} className="space-y-1.5 max-h-[60vh] overflow-y-auto">
-        {pendingTasks.map((task, index) => {
-          const categoryColor = task.category ? categoryColors[task.category] : undefined;
-          const startTime = getTaskStartTime(index);
-          const isBeingDragged = draggedIndex === index;
-          const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
-            ? touchCurrentY - touchStartY 
-            : 0;
-          const isHovered = hoverIndex === index && !isBeingDragged;
+    <div className="space-y-3">
+      {/* Current Time Period Indicator */}
+      <div className="flex items-center justify-between p-2 rounded-lg border-2 animate-pulse" style={{ 
+        borderColor: getTimePeriodInfo(currentPeriod).urgencyColor,
+        backgroundColor: `${getTimePeriodInfo(currentPeriod).color}15`
+      }}>
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }} />
+          <span className="text-sm font-bold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
+            {getTimePeriodInfo(currentPeriod).icon} {getTimePeriodInfo(currentPeriod).label} is now!
+          </span>
+        </div>
+        <span className="text-xs font-semibold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
+          {formatTimeRemaining()}
+        </span>
+      </div>
+
+      {/* Grouped Tasks by Time Period */}
+      <div ref={containerRef} className="space-y-4 max-h-[60vh] overflow-y-auto">
+        {groupedTasks.map(({ period, tasks: periodTasks, isActive }) => {
+          if (periodTasks.length === 0) return null;
           
           return (
-            <div key={task.id} className="relative">
-              {/* Visual placeholder line */}
-              {isHovered && isDraggingTouch && (
-                <div 
-                  className="absolute -top-1 left-0 right-0 h-0.5 rounded-full animate-pulse"
-                  style={{ 
-                    backgroundColor: categoryColor || 'hsl(var(--primary))',
-                    boxShadow: `0 0 8px ${categoryColor || 'hsl(var(--primary))'}` 
-                  }}
-                />
-              )}
-              
-              <div
-                data-index={index}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                onTouchStart={(e) => handleTouchStart(e, index)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
-                style={{
-                  borderColor: categoryColor || 'hsl(var(--border))',
-                  backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
-                  opacity: isBeingDragged ? 0.8 : 1,
-                  transform: isBeingDragged && isDraggingTouch
-                    ? `translateY(${touchOffset}px) scale(1.05)` 
-                    : isBeingDragged 
-                    ? 'scale(1.02)' 
-                    : 'scale(1)',
-                  zIndex: isBeingDragged ? 50 : 1,
-                  position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
-                  touchAction: 'none',
-                  boxShadow: isBeingDragged && isDraggingTouch 
-                    ? `0 8px 24px ${categoryColor ? `${categoryColor}40` : 'rgba(0,0,0,0.15)'}`
-                    : 'none'
-                }}
-              >
-              <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <div 
-                className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
-                style={{
-                  backgroundColor: categoryColor || 'hsl(var(--muted))'
-                }}
-              >
-                {index + 1}
+            <div key={period.id} className="space-y-1.5">
+              <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1">
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-xl">{period.icon}</span>
+                  <h3 className="text-sm font-bold" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
+                    {period.label}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">({period.timeRange})</span>
+                  {isActive && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold animate-pulse" style={{ 
+                      backgroundColor: period.urgencyColor,
+                      color: 'white'
+                    }}>
+                      NOW
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {periodTasks.length} task{periodTasks.length !== 1 ? 's' : ''}
+                </span>
               </div>
+              
+              <div className="space-y-1.5">
+                {periodTasks.map((task, taskIndex) => {
+                  const globalIndex = pendingTasks.findIndex(t => t.id === task.id);
+                  const categoryColor = task.category ? categoryColors[task.category] : undefined;
+                  const startTime = getTaskStartTime(globalIndex);
+                  const isBeingDragged = draggedIndex === globalIndex;
+                  const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
+                    ? touchCurrentY - touchStartY 
+                    : 0;
+                  const isHovered = hoverIndex === globalIndex && !isBeingDragged;
+                  
+                  return (
+                    <div key={task.id} className="relative">
+                      {/* Visual placeholder line */}
+                      {isHovered && isDraggingTouch && (
+                        <div 
+                          className="absolute -top-1 left-0 right-0 h-0.5 rounded-full animate-pulse"
+                          style={{ 
+                            backgroundColor: categoryColor || 'hsl(var(--primary))',
+                            boxShadow: `0 0 8px ${categoryColor || 'hsl(var(--primary))'}` 
+                          }}
+                        />
+                      )}
+                      
+                      <div
+                        data-index={globalIndex}
+                        draggable
+                        onDragStart={() => handleDragStart(globalIndex)}
+                        onDragOver={(e) => handleDragOver(e, globalIndex)}
+                        onDragEnd={handleDragEnd}
+                        onTouchStart={(e) => handleTouchStart(e, globalIndex)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
+                        style={{
+                          borderColor: isActive ? period.urgencyColor : (categoryColor || 'hsl(var(--border))'),
+                          backgroundColor: isActive 
+                            ? `${period.color}20` 
+                            : categoryColor 
+                            ? `${categoryColor}10` 
+                            : undefined,
+                          opacity: isBeingDragged ? 0.8 : 1,
+                          transform: isBeingDragged && isDraggingTouch
+                            ? `translateY(${touchOffset}px) scale(1.05)` 
+                            : isBeingDragged 
+                            ? 'scale(1.02)' 
+                            : 'scale(1)',
+                          zIndex: isBeingDragged ? 50 : 1,
+                          position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
+                          touchAction: 'none',
+                          boxShadow: isBeingDragged && isDraggingTouch 
+                            ? `0 8px 24px ${categoryColor ? `${categoryColor}40` : 'rgba(0,0,0,0.15)'}`
+                            : 'none'
+                        }}
+                      >
+                      <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <div 
+                        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                        style={{
+                          backgroundColor: isActive ? period.urgencyColor : (categoryColor || 'hsl(var(--muted))')
+                        }}
+                      >
+                        {taskIndex + 1}
+                      </div>
               {task.is_priority && (
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
               )}
@@ -356,10 +415,202 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
         })}
+        
+        {/* Unscheduled Tasks */}
+        {unscheduledTasks.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1">
+              <h3 className="text-sm font-bold text-muted-foreground">⏰ Unscheduled</h3>
+              <span className="text-xs text-muted-foreground">({unscheduledTasks.length})</span>
+            </div>
+            
+            <div className="space-y-1.5">
+              {unscheduledTasks.map((task, taskIndex) => {
+                const globalIndex = pendingTasks.findIndex(t => t.id === task.id);
+                const categoryColor = task.category ? categoryColors[task.category] : undefined;
+                const startTime = getTaskStartTime(globalIndex);
+                const isBeingDragged = draggedIndex === globalIndex;
+                const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
+                  ? touchCurrentY - touchStartY 
+                  : 0;
+                const isHovered = hoverIndex === globalIndex && !isBeingDragged;
+                
+                return (
+                  <div key={task.id} className="relative">
+                    {isHovered && isDraggingTouch && (
+                      <div 
+                        className="absolute -top-1 left-0 right-0 h-0.5 rounded-full animate-pulse"
+                        style={{ 
+                          backgroundColor: categoryColor || 'hsl(var(--primary))',
+                          boxShadow: `0 0 8px ${categoryColor || 'hsl(var(--primary))'}` 
+                        }}
+                      />
+                    )}
+                    
+                    <div
+                      data-index={globalIndex}
+                      draggable
+                      onDragStart={() => handleDragStart(globalIndex)}
+                      onDragOver={(e) => handleDragOver(e, globalIndex)}
+                      onDragEnd={handleDragEnd}
+                      onTouchStart={(e) => handleTouchStart(e, globalIndex)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      className="task-item group flex items-center gap-2 p-2 rounded bg-card border transition-all duration-200 ease-out cursor-move"
+                      style={{
+                        borderColor: categoryColor || 'hsl(var(--border))',
+                        backgroundColor: categoryColor ? `${categoryColor}10` : undefined,
+                        opacity: isBeingDragged ? 0.8 : 1,
+                        transform: isBeingDragged && isDraggingTouch
+                          ? `translateY(${touchOffset}px) scale(1.05)` 
+                          : isBeingDragged 
+                          ? 'scale(1.02)' 
+                          : 'scale(1)',
+                        zIndex: isBeingDragged ? 50 : 1,
+                        position: isBeingDragged && isDraggingTouch ? 'relative' : 'static',
+                        touchAction: 'none',
+                        boxShadow: isBeingDragged && isDraggingTouch 
+                          ? `0 8px 24px ${categoryColor ? `${categoryColor}40` : 'rgba(0,0,0,0.15)'}`
+                          : 'none'
+                      }}
+                    >
+                    <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <div 
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                      style={{
+                        backgroundColor: categoryColor || 'hsl(var(--muted))'
+                      }}
+                    >
+                      {taskIndex + 1}
+                    </div>
+                    {task.is_priority && (
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      {editingTitle === task.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={editingTitleValue}
+                            onChange={(e) => setEditingTitleValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                onUpdateTask(task.id, editingTitleValue);
+                                setEditingTitle(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingTitle(null);
+                              }
+                            }}
+                            className="flex-1 px-2 py-1 text-sm bg-background border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                            autoFocus
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              onUpdateTask(task.id, editingTitleValue);
+                              setEditingTitle(null);
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Check className="w-3 h-3 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingTitle(null)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="w-3 h-3 text-red-600" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: categoryColor ? 'white' : 'hsl(var(--muted-foreground))' }}>
+                          <Clock className="w-3 h-3" />
+                          <span>{format(startTime, 'HH:mm')}</span>
+                        </div>
+                        {task.category && categoryColor && (
+                          <div 
+                            className="inline-block text-[10px] text-white font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: categoryColor }}
+                          >
+                            {task.category}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {editingTitle !== task.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingTitle(task.id);
+                            setEditingTitleValue(task.title);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      )}
+                      {editingPoints === task.id ? (
+                        <input
+                          type="number"
+                          min="1"
+                          max="999"
+                          defaultValue={task.points || 1}
+                          onBlur={(e) => {
+                            const points = parseInt(e.target.value) || 1;
+                            onUpdatePoints(task.id, points);
+                            setEditingPoints(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const points = parseInt(e.currentTarget.value) || 1;
+                              onUpdatePoints(task.id, points);
+                              setEditingPoints(null);
+                            }
+                          }}
+                          autoFocus
+                          className="w-12 h-6 px-1 text-xs text-center bg-background border rounded"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setEditingPoints(task.id)}
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold rounded hover:bg-primary/10 transition-colors"
+                          style={{ color: categoryColor || 'hsl(var(--primary))' }}
+                        >
+                          <span>{task.points || 1}</span>
+                          <span className="text-[10px]">XP</span>
+                        </button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteTask(task.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive h-6 w-6 p-0"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

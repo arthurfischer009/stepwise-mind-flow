@@ -65,6 +65,36 @@ export type Database = {
         }
         Relationships: []
       }
+      category_progress: {
+        Row: {
+          category_name: string
+          created_at: string
+          id: string
+          level: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          category_name: string
+          created_at?: string
+          id?: string
+          level?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          category_name?: string
+          created_at?: string
+          id?: string
+          level?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       daily_challenges: {
         Row: {
           bonus_xp: number
@@ -165,6 +195,7 @@ export type Database = {
           is_priority: boolean | null
           points: number | null
           sort_order: number | null
+          time_period: string | null
           title: string
           updated_at: string | null
           user_id: string | null
@@ -178,6 +209,7 @@ export type Database = {
           is_priority?: boolean | null
           points?: number | null
           sort_order?: number | null
+          time_period?: string | null
           title: string
           updated_at?: string | null
           user_id?: string | null
@@ -191,6 +223,7 @@ export type Database = {
           is_priority?: boolean | null
           points?: number | null
           sort_order?: number | null
+          time_period?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string | null
@@ -238,7 +271,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_orphaned_tasks: { Args: never; Returns: undefined }
+      reassign_all_tasks_to_current_user: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
