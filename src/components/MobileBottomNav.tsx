@@ -8,6 +8,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SoundToggle } from "./SoundToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { LogOut } from "lucide-react";
 
 interface MobileBottomNavProps {
@@ -84,6 +85,10 @@ export const MobileBottomNav = ({
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-3 mt-4 pb-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted min-h-[56px]">
+                <span className="font-medium">Theme</span>
+                <ThemeToggle />
+              </div>
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted min-h-[56px]">
                 <span className="font-medium">Sound Effects</span>
                 <SoundToggle />
