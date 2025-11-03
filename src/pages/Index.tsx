@@ -66,6 +66,7 @@ import {
   playXPGain,
   playError 
 } from "@/lib/sounds";
+import { processCarryOverTasks } from "@/lib/taskCarryOver";
 
 interface Task {
   id: string;
@@ -170,9 +171,12 @@ const Index = () => {
   // Load tasks from database
   useEffect(() => {
     if (user) {
-      loadTasks();
-      loadAchievements();
-      checkDailyLogin();
+      // Process carry-over tasks first (moves incomplete tasks from yesterday)
+      processCarryOverTasks(user.id).then(() => {
+        loadTasks();
+        loadAchievements();
+        checkDailyLogin();
+      });
     }
   }, [user]);
 

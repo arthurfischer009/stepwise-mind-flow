@@ -191,8 +191,15 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     return { ...task, calculatedPeriod: timePeriod, startTime, originalIndex: index };
   });
   
-  // Group tasks by period and sort so current period is first
-  const groupedTasks = TIME_PERIODS.map(period => ({
+  // Get current period index
+  const currentPeriodIndex = TIME_PERIODS.findIndex(p => p.id === currentPeriod);
+  
+  // Only show periods up to and including current period
+  // After night (21:00-5:00), no more periods should be shown as the day ends
+  const visiblePeriods = TIME_PERIODS.slice(0, currentPeriodIndex + 1);
+  
+  // Group tasks by period - only show tasks for visible periods
+  const groupedTasks = visiblePeriods.map(period => ({
     period,
     tasks: tasksWithPeriods.filter(t => t.calculatedPeriod === period.id),
     isActive: period.id === currentPeriod
@@ -202,15 +209,10 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     if (b.isActive) return 1;
     
     // Then sort by period order (morning -> day -> evening -> night)
-    const currentIndex = TIME_PERIODS.findIndex(p => p.id === currentPeriod);
     const aIndex = TIME_PERIODS.findIndex(p => p.id === a.period.id);
     const bIndex = TIME_PERIODS.findIndex(p => p.id === b.period.id);
     
-    // Calculate distance from current period (wrapping around)
-    const aDistance = (aIndex - currentIndex + TIME_PERIODS.length) % TIME_PERIODS.length;
-    const bDistance = (bIndex - currentIndex + TIME_PERIODS.length) % TIME_PERIODS.length;
-    
-    return aDistance - bDistance;
+    return aIndex - bIndex;
   });
 
   return (

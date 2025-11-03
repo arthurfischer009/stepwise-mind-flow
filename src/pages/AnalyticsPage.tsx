@@ -30,6 +30,7 @@ import {
 } from "recharts";
 import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
 import { getCustomDayStart, getCustomDayEnd, getCustomDayBoundaries } from "@/lib/dateUtils";
+import { CarryOverStats } from "@/components/CarryOverStats";
 
 interface Task {
   id: string;
@@ -761,6 +762,13 @@ const AnalyticsPage = () => {
             </div>
           ))}
         </div>
+
+        {/* Carry Over Stats */}
+        {user && (
+          <div className="mb-6">
+            <CarryOverStats userId={user.id} daysAgo={7} />
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Chart 1: Daily Progress */}

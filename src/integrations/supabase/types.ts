@@ -38,6 +38,48 @@ export type Database = {
         }
         Relationships: []
       }
+      carried_over_tasks: {
+        Row: {
+          carried_over_at: string
+          created_at: string
+          id: string
+          lock_in_session_id: string | null
+          original_date: string
+          original_time_period: string
+          task_category: string | null
+          task_id: string
+          task_points: number | null
+          task_title: string
+          user_id: string
+        }
+        Insert: {
+          carried_over_at?: string
+          created_at?: string
+          id?: string
+          lock_in_session_id?: string | null
+          original_date: string
+          original_time_period: string
+          task_category?: string | null
+          task_id: string
+          task_points?: number | null
+          task_title: string
+          user_id: string
+        }
+        Update: {
+          carried_over_at?: string
+          created_at?: string
+          id?: string
+          lock_in_session_id?: string | null
+          original_date?: string
+          original_time_period?: string
+          task_category?: string | null
+          task_id?: string
+          task_points?: number | null
+          task_title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
