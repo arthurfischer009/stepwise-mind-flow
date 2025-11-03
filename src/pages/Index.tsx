@@ -7,6 +7,7 @@ import { AISuggestions } from "@/components/AISuggestions";
 import { AchievementsPanel } from "@/components/AchievementsPanel";
 import { AchievementNotification } from "@/components/AchievementNotification";
 import { SoundToggle } from "@/components/SoundToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { DailyPlanningDialog } from "@/components/DailyPlanningDialog";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { MorningRitual } from "@/components/MorningRitual";
@@ -764,6 +765,7 @@ const Index = () => {
                 completedCount={tasks.filter(t => t.completed).length}
               />
               <AchievementsPanel unlockedAchievements={unlockedAchievements} />
+              <ThemeToggle />
               <SoundToggle />
               <Button
                 onClick={() => setShowMorningRitual(true)}
