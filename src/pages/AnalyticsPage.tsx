@@ -321,6 +321,7 @@ const AnalyticsPage = () => {
     const totalPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + (t.points || 1), 0);
     const avgPoints = completed > 0 ? Math.round(totalPoints / completed) : 0;
     const completionRate = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    const pushedData = getTasksPushedToNextDay();
 
     return [
       { metric: 'Total Tasks', value: tasks.length, icon: Target },
@@ -328,6 +329,7 @@ const AnalyticsPage = () => {
       { metric: 'Total XP', value: totalPoints, icon: Zap },
       { metric: 'Avg XP/Task', value: avgPoints, icon: TrendingUp },
       { metric: 'Completion %', value: completionRate, icon: BarChart3 },
+      { metric: 'Pushed to Next Day', value: pushedData.total, icon: Clock, highlight: true },
     ];
   };
 
@@ -645,6 +647,67 @@ const AnalyticsPage = () => {
     };
   };
 
+  // Tasks Pushed to Next Day Analytics
+  const getTasksPushedToNextDay = () => {
+    const pushedTasks = tasks.filter(task => {
+      if (!task.completed || !task.completed_at) return false;
+      
+      const createdDate = startOfDay(parseISO(task.created_at));
+      const completedDate = startOfDay(parseISO(task.completed_at));
+      
+      // Task was completed at least 1 day after creation
+      return completedDate > createdDate;
+    });
+
+    return {
+      total: pushedTasks.length,
+      percentage: tasks.filter(t => t.completed).length > 0 
+        ? Math.round((pushedTasks.length / tasks.filter(t => t.completed).length) * 100)
+        : 0,
+      tasks: pushedTasks
+    };
+  };
+
+  const getTasksPushedTrend = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const daysAgo = 6 - i;
+      const { start, end } = getCustomDayBoundaries(daysAgo);
+      
+      const completedOnDay = tasks.filter(t => {
+        if (!t.completed || !t.completed_at) return false;
+        const completedDate = parseISO(t.completed_at);
+        return isWithinInterval(completedDate, { start, end });
+      });
+
+      const pushed = completedOnDay.filter(t => {
+        const createdDate = startOfDay(parseISO(t.created_at));
+        const completedDate = startOfDay(parseISO(t.completed_at!));
+        return completedDate > createdDate;
+      }).length;
+
+      const completedSameDay = completedOnDay.length - pushed;
+      
+      return {
+        date: format(start, 'MMM dd'),
+        pushed,
+        sameDay: completedSameDay,
+        total: completedOnDay.length
+      };
+    });
+    return last7Days;
+  };
+
+  const getUncompletedFromPreviousDays = () => {
+    const today = getCustomDayStart(new Date());
+    const yesterday = getCustomDayStart(subDays(new Date(), 1));
+    
+    return tasks.filter(t => {
+      if (t.completed) return false;
+      const createdDate = parseISO(t.created_at);
+      return createdDate < yesterday;
+    }).length;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -680,17 +743,21 @@ const AnalyticsPage = () => {
         </header>
 
         {/* Overall Stats Cards */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-6 gap-4 mb-6">
           {getOverallStats().map((stat) => (
             <div
               key={stat.metric}
-              className="rounded-xl bg-card border border-border p-4 hover:border-primary/50 transition-all"
+              className={`rounded-xl bg-card border p-4 hover:border-primary/50 transition-all ${
+                (stat as any).highlight ? 'border-destructive/50 bg-destructive/5' : 'border-border'
+              }`}
             >
               <div className="flex items-center gap-2 mb-2">
-                <stat.icon className="w-4 h-4 text-primary" />
+                <stat.icon className={`w-4 h-4 ${(stat as any).highlight ? 'text-destructive' : 'text-primary'}`} />
                 <div className="text-xs text-muted-foreground">{stat.metric}</div>
               </div>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className={`text-2xl font-bold ${(stat as any).highlight ? 'text-destructive' : ''}`}>
+                {stat.value}
+              </div>
             </div>
           ))}
         </div>
@@ -891,6 +958,36 @@ const AnalyticsPage = () => {
                 <Bar dataKey="count" fill="hsl(var(--secondary))" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Chart: Tasks Pushed to Next Day Trend */}
+          <div className="rounded-xl bg-card border border-destructive/50 p-4 bg-destructive/5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-destructive" />
+              ⚠️ Tasks Pushed to Next Day (Last 7 Days)
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={getTasksPushedTrend()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                />
+                <Legend />
+                <Bar dataKey="sameDay" stackId="a" fill="hsl(var(--primary))" name="Same Day ✓" />
+                <Bar dataKey="pushed" stackId="a" fill="hsl(var(--destructive))" name="Pushed ⚠️" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-3 rounded-lg bg-background border border-border">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Goal: Minimize red bars</span>
+                <span className="font-bold">
+                  <span className="text-destructive">{getTasksPushedToNextDay().percentage}%</span>
+                  <span className="text-muted-foreground"> of completed tasks were pushed</span>
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Chart 10: Points per Day */}
