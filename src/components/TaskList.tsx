@@ -189,26 +189,31 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     isActive: period.id === currentPeriod
   }));
   
-  // Tasks without time period
+  // Tasks without time period - show them separately with a note
   const unscheduledTasks = pendingTasks.filter(t => !t.time_period);
+  
+  // Check if we have any scheduled tasks
+  const hasScheduledTasks = groupedTasks.some(g => g.tasks.length > 0);
 
   return (
     <div className="space-y-3">
-      {/* Current Time Period Indicator */}
-      <div className="flex items-center justify-between p-2 rounded-lg border-2 animate-pulse" style={{ 
-        borderColor: getTimePeriodInfo(currentPeriod).urgencyColor,
-        backgroundColor: `${getTimePeriodInfo(currentPeriod).color}15`
-      }}>
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }} />
-          <span className="text-sm font-bold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
-            {getTimePeriodInfo(currentPeriod).icon} {getTimePeriodInfo(currentPeriod).label} is now!
+      {/* Current Time Period Indicator - only show if there are scheduled tasks */}
+      {hasScheduledTasks && (
+        <div className="flex items-center justify-between p-3 rounded-lg border-2 animate-pulse" style={{ 
+          borderColor: getTimePeriodInfo(currentPeriod).urgencyColor,
+          backgroundColor: `${getTimePeriodInfo(currentPeriod).color}15`
+        }}>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }} />
+            <span className="text-base font-bold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
+              {getTimePeriodInfo(currentPeriod).icon} {getTimePeriodInfo(currentPeriod).label} is now!
+            </span>
+          </div>
+          <span className="text-sm font-semibold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
+            {formatTimeRemaining()}
           </span>
         </div>
-        <span className="text-xs font-semibold" style={{ color: getTimePeriodInfo(currentPeriod).urgencyColor }}>
-          {formatTimeRemaining()}
-        </span>
-      </div>
+      )}
 
       {/* Grouped Tasks by Time Period */}
       <div ref={containerRef} className="space-y-4 max-h-[60vh] overflow-y-auto">
@@ -216,26 +221,31 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
           if (periodTasks.length === 0) return null;
           
           return (
-            <div key={period.id} className="space-y-1.5">
-              <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1">
+            <div key={period.id} className="space-y-2 pb-4 border-b border-border/50 last:border-0">
+              <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 px-1">
                 <div className="flex items-center gap-2 flex-1">
-                  <span className="text-xl">{period.icon}</span>
-                  <h3 className="text-sm font-bold" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
-                    {period.label}
-                  </h3>
-                  <span className="text-xs text-muted-foreground">({period.timeRange})</span>
+                  <span className="text-2xl">{period.icon}</span>
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-bold leading-tight" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
+                      {period.label}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">{period.timeRange}</span>
+                  </div>
                   {isActive && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold animate-pulse" style={{ 
+                    <span className="text-xs px-2 py-1 rounded-full font-bold animate-pulse" style={{ 
                       backgroundColor: period.urgencyColor,
                       color: 'white'
                     }}>
-                      NOW
+                      ACTIVE NOW
                     </span>
                   )}
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {periodTasks.length} task{periodTasks.length !== 1 ? 's' : ''}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold" style={{ color: isActive ? period.urgencyColor : 'hsl(var(--muted-foreground))' }}>
+                    {periodTasks.length}
+                  </span>
+                  <span className="text-xs text-muted-foreground">task{periodTasks.length !== 1 ? 's' : ''}</span>
+                </div>
               </div>
               
               <div className="space-y-1.5">
@@ -426,10 +436,19 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
         
         {/* Unscheduled Tasks */}
         {unscheduledTasks.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-1">
-              <h3 className="text-sm font-bold text-muted-foreground">⏰ Unscheduled</h3>
-              <span className="text-xs text-muted-foreground">({unscheduledTasks.length})</span>
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 px-1 border-t-2 border-dashed border-muted">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⏰</span>
+                <div className="flex flex-col">
+                  <h3 className="text-base font-bold text-muted-foreground">Not Scheduled</h3>
+                  <span className="text-xs text-muted-foreground">Assign a time period to organize</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-sm font-bold text-muted-foreground">{unscheduledTasks.length}</span>
+                <span className="text-xs text-muted-foreground">task{unscheduledTasks.length !== 1 ? 's' : ''}</span>
+              </div>
             </div>
             
             <div className="space-y-1.5">
