@@ -143,6 +143,102 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_metrics: {
+        Row: {
+          commitment_rate: number | null
+          created_at: string
+          id: string
+          metric_date: string
+          tasks_completed: number | null
+          tasks_planned: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          commitment_rate?: number | null
+          created_at?: string
+          id?: string
+          metric_date?: string
+          tasks_completed?: number | null
+          tasks_planned?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          commitment_rate?: number | null
+          created_at?: string
+          id?: string
+          metric_date?: string
+          tasks_completed?: number | null
+          tasks_planned?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deleted_tasks_log: {
+        Row: {
+          created_at: string
+          deleted_at: string
+          id: string
+          penalty_points: number
+          task_id: string
+          task_title: string
+          user_id: string
+          was_locked_in: boolean
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string
+          id?: string
+          penalty_points?: number
+          task_id: string
+          task_title: string
+          user_id: string
+          was_locked_in?: boolean
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string
+          id?: string
+          penalty_points?: number
+          task_id?: string
+          task_title?: string
+          user_id?: string
+          was_locked_in?: boolean
+        }
+        Relationships: []
+      }
+      lock_in_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          lock_date: string
+          locked_at: string
+          tasks_count: number
+          tasks_snapshot: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lock_date?: string
+          locked_at?: string
+          tasks_count?: number
+          tasks_snapshot?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lock_date?: string
+          locked_at?: string
+          tasks_count?: number
+          tasks_snapshot?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_relationships: {
         Row: {
           created_at: string | null
@@ -184,6 +280,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      task_timers: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          overrun_minutes: number | null
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          overrun_minutes?: number | null
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          overrun_minutes?: number | null
+          started_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       tasks: {
         Row: {

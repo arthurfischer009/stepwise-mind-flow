@@ -33,7 +33,7 @@ export const LockInButton = ({ tasks, userId, onLockIn }: LockInButtonProps) => 
         .select('*')
         .eq('user_id', userId)
         .eq('lock_date', today)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid error when no rows
+        .maybeSingle();
 
       if (error) {
         console.error('Error checking lock-in status:', error);
@@ -54,6 +54,10 @@ export const LockInButton = ({ tasks, userId, onLockIn }: LockInButtonProps) => 
         });
         setLockInTime(time);
         localStorage.setItem(`lock_in_${today}`, time);
+      } else {
+        // No lock-in session found for today - reset state
+        setIsLockedIn(false);
+        setLockInTime(null);
       }
     } catch (error) {
       console.error('Error checking lock-in status:', error);

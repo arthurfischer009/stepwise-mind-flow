@@ -191,11 +191,27 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     return { ...task, calculatedPeriod: timePeriod, startTime, originalIndex: index };
   });
   
+  // Group tasks by period and sort so current period is first
   const groupedTasks = TIME_PERIODS.map(period => ({
     period,
     tasks: tasksWithPeriods.filter(t => t.calculatedPeriod === period.id),
     isActive: period.id === currentPeriod
-  }));
+  })).sort((a, b) => {
+    // Current period always first
+    if (a.isActive) return -1;
+    if (b.isActive) return 1;
+    
+    // Then sort by period order (morning -> day -> evening -> night)
+    const currentIndex = TIME_PERIODS.findIndex(p => p.id === currentPeriod);
+    const aIndex = TIME_PERIODS.findIndex(p => p.id === a.period.id);
+    const bIndex = TIME_PERIODS.findIndex(p => p.id === b.period.id);
+    
+    // Calculate distance from current period (wrapping around)
+    const aDistance = (aIndex - currentIndex + TIME_PERIODS.length) % TIME_PERIODS.length;
+    const bDistance = (bIndex - currentIndex + TIME_PERIODS.length) % TIME_PERIODS.length;
+    
+    return aDistance - bDistance;
+  });
 
   return (
     <div className="space-y-3">
