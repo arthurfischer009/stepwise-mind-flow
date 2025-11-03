@@ -65,7 +65,7 @@ export const LockInMetrics = ({ userId }: LockInMetricsProps) => {
         .from('deleted_tasks_log')
         .select('*')
         .eq('user_id', userId)
-        .eq('was_after_lock_in', true)
+        .eq('was_locked_in', true)
         .gte('deleted_at', new Date(last7Days[0]).toISOString())
         .order('deleted_at', { ascending: false });
 
@@ -92,7 +92,6 @@ export const LockInMetrics = ({ userId }: LockInMetricsProps) => {
         .from('task_timers')
         .select('*')
         .eq('user_id', userId)
-        .eq('session_type', 'work')
         .not('ended_at', 'is', null)
         .gte('started_at', new Date(last7Days[0]).toISOString())
         .order('started_at', { ascending: true });

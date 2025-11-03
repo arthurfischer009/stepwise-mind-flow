@@ -72,7 +72,6 @@ const sendTaskReminder = () => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: 'hourly-reminder',
-      renotify: true,
       requireInteraction: false,
       silent: false,
     });

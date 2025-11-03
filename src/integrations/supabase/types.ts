@@ -181,8 +181,11 @@ export type Database = {
           created_at: string
           deleted_at: string
           id: string
+          lock_in_session_id: string | null
           penalty_points: number
+          task_category: string | null
           task_id: string
+          task_points: number | null
           task_title: string
           user_id: string
           was_locked_in: boolean
@@ -191,8 +194,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string
           id?: string
+          lock_in_session_id?: string | null
           penalty_points?: number
+          task_category?: string | null
           task_id: string
+          task_points?: number | null
           task_title: string
           user_id: string
           was_locked_in?: boolean
@@ -201,8 +207,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string
           id?: string
+          lock_in_session_id?: string | null
           penalty_points?: number
+          task_category?: string | null
           task_id?: string
+          task_points?: number | null
           task_title?: string
           user_id?: string
           was_locked_in?: boolean

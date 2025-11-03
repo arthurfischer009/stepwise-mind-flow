@@ -590,11 +590,12 @@ const Index = () => {
             .from('deleted_tasks_log')
             .insert({
               user_id: user?.id,
+              task_id: taskToDelete.id,
               task_title: taskToDelete.title,
               task_category: taskToDelete.category,
               task_points: taskToDelete.points || 1,
               lock_in_session_id: lockInSessionId || today,
-              was_after_lock_in: true,
+              was_locked_in: true,
               penalty_points: penaltyPoints,
             });
         } catch (logError) {
