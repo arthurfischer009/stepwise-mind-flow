@@ -47,6 +47,7 @@ import {
   Radar,
 } from "recharts";
 import { getCustomDayBoundaries } from "@/lib/dateUtils";
+import { getCurrentTimePeriod } from "@/lib/timePeriods";
 import { ACHIEVEMENTS, Achievement, AchievementCheckData } from "@/lib/achievements";
 import { triggerLevelUpConfetti, triggerAchievementConfetti } from "@/lib/confetti";
 import { 
@@ -344,9 +345,12 @@ const Index = () => {
 
       const maxSortOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order || 0)) : 0;
 
+      // Get current time period
+      const timePeriod = getCurrentTimePeriod();
+
       // Auto-create category in parallel if needed
       const needsNewCategory = category && !categories.find(c => c.name === category);
-      
+
       const categoryColorPalette = [
         'hsl(221, 83%, 53%)',   // Blue
         'hsl(142, 76%, 36%)',   // Green
@@ -358,63 +362,71 @@ const Index = () => {
         'hsl(328, 86%, 70%)',   // Pink
       ];
 
-      // Run task and category creation in parallel
-      const promises = [
-        supabase
-          .from('tasks')
-          .insert({ 
-            title, 
-            category, 
-            completed: false, 
-            sort_order: maxSortOrder + 1, 
-            points, 
-            user_id: user.id
-          })
-          .select()
-          .single()
-      ];
+      // Build task insert object
+      const taskInsert: any = {
+        title,
+        completed: false,
+        sort_order: maxSortOrder + 1,
+        points,
+        user_id: user.id,
+        time_period: timePeriod,
+      };
 
+      // Only add category if it's provided
+      if (category) {
+        taskInsert.category = category;
+      }
+
+      // Insert task first
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .insert(taskInsert)
+        .select()
+        .single();
+
+      if (taskError) {
+        console.error('Task insert error:', taskError);
+        throw taskError;
+      }
+
+      // Update local state with new task
+      setTasks((prev) => [...prev, taskData]);
+
+      // Create category if needed (after task is created)
       if (needsNewCategory) {
-        const usedColors = new Set(categories.map(c => c.color));
-        const availableColors = categoryColorPalette.filter(color => !usedColors.has(color));
-        const defaultColor = availableColors.length > 0 
-          ? availableColors[0] 
-          : categoryColorPalette[categories.length % categoryColorPalette.length];
-        
-        promises.push(
-          supabase
+        try {
+          const usedColors = new Set(categories.map(c => c.color));
+          const availableColors = categoryColorPalette.filter(color => !usedColors.has(color));
+          const defaultColor = availableColors.length > 0
+            ? availableColors[0]
+            : categoryColorPalette[categories.length % categoryColorPalette.length];
+
+          const { data: categoryData, error: categoryError } = await supabase
             .from('categories')
             .insert({ name: category, color: defaultColor, user_id: user.id })
             .select()
-            .single()
-        );
-      }
+            .single();
 
-      const results = await Promise.all(promises);
-      const taskResult = results[0];
-
-      if (taskResult.error) throw taskResult.error;
-
-      // Update local state
-      setTasks((prev) => [...prev, taskResult.data]);
-      
-      // Update categories if a new one was created
-      if (needsNewCategory && results[1]?.data) {
-        setCategories((prev) => [...prev, results[1].data]);
+          if (!categoryError && categoryData) {
+            setCategories((prev) => [...prev, categoryData]);
+          }
+        } catch (categoryError) {
+          console.error('Category creation failed, but task was created:', categoryError);
+        }
       }
 
       toast({
         title: "Task Added",
         description: "New challenge accepted!",
       });
-      
+
       // Play sound effect
       playTaskAdded();
     } catch (error: any) {
       console.error('Error adding task:', error);
       toast({
         title: "Error",
-        description: "Failed to add task",
+        description: error.message || "Failed to add task",
         variant: "destructive",
       });
     }
@@ -564,21 +576,30 @@ const Index = () => {
       const taskToDelete = tasks.find(t => t.id === id);
       if (!taskToDelete) return;
 
+      // Check if we're locked in (either via database or localStorage)
+      const today = new Date().toISOString().split('T')[0];
+      const isLockedIn = lockInSessionId || localStorage.getItem(`lock_in_${today}`);
+
       // Log deleted task if we're locked in
-      if (lockInSessionId) {
+      if (isLockedIn) {
         const penaltyPoints = -(taskToDelete.points || 1) * 2; // Double negative penalty
 
-        await supabase
-          .from('deleted_tasks_log')
-          .insert({
-            user_id: user?.id,
-            task_title: taskToDelete.title,
-            task_category: taskToDelete.category,
-            task_points: taskToDelete.points || 1,
-            lock_in_session_id: lockInSessionId,
-            was_after_lock_in: true,
-            penalty_points: penaltyPoints,
-          });
+        // Try to log to database, but continue even if it fails
+        try {
+          await supabase
+            .from('deleted_tasks_log')
+            .insert({
+              user_id: user?.id,
+              task_title: taskToDelete.title,
+              task_category: taskToDelete.category,
+              task_points: taskToDelete.points || 1,
+              lock_in_session_id: lockInSessionId || today,
+              was_after_lock_in: true,
+              penalty_points: penaltyPoints,
+            });
+        } catch (logError) {
+          console.error('Failed to log deletion, continuing anyway:', logError);
+        }
 
         toast({
           title: "⚠️ Task Deleted After Lock-In",
