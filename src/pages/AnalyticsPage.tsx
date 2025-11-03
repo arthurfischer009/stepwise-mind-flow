@@ -555,6 +555,96 @@ const AnalyticsPage = () => {
     });
   };
 
+  // Category-Time Period Matrix
+  const getCategoryTimePeriodMatrix = () => {
+    const matrix = new Map<string, { morning: number; day: number; evening: number; night: number }>();
+    
+    // Initialize categories
+    categories.forEach(cat => {
+      matrix.set(cat.name, { morning: 0, day: 0, evening: 0, night: 0 });
+    });
+    matrix.set('Uncategorized', { morning: 0, day: 0, evening: 0, night: 0 });
+
+    // Count tasks by category and time period
+    tasks.filter(t => t.completed && t.completed_at).forEach(task => {
+      const hour = parseISO(task.completed_at!).getHours();
+      const category = task.category || 'Uncategorized';
+      
+      let period: 'morning' | 'day' | 'evening' | 'night' = 'night';
+      if (hour >= 5 && hour < 10) period = 'morning';
+      else if (hour >= 10 && hour < 16) period = 'day';
+      else if (hour >= 16 && hour < 21) period = 'evening';
+      
+      const current = matrix.get(category);
+      if (current) {
+        current[period]++;
+      } else {
+        matrix.set(category, { morning: 0, day: 0, evening: 0, night: 0 });
+        matrix.get(category)![period] = 1;
+      }
+    });
+
+    // Convert to array and filter out empty categories
+    return Array.from(matrix.entries())
+      .filter(([_, counts]) => counts.morning + counts.day + counts.evening + counts.night > 0)
+      .map(([category, counts]) => {
+        const total = counts.morning + counts.day + counts.evening + counts.night;
+        return {
+          category,
+          morning: counts.morning,
+          day: counts.day,
+          evening: counts.evening,
+          night: counts.night,
+          total,
+          color: categories.find(c => c.name === category)?.color || 'hsl(var(--muted))',
+          // Calculate dominant period
+          dominant: Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0] as 'morning' | 'day' | 'evening' | 'night'
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  };
+
+  // Top categories per time period
+  const getTopCategoriesPerPeriod = () => {
+    const periods = {
+      morning: new Map<string, number>(),
+      day: new Map<string, number>(),
+      evening: new Map<string, number>(),
+      night: new Map<string, number>()
+    };
+
+    tasks.filter(t => t.completed && t.completed_at).forEach(task => {
+      const hour = parseISO(task.completed_at!).getHours();
+      const category = task.category || 'Uncategorized';
+      
+      let period: 'morning' | 'day' | 'evening' | 'night' = 'night';
+      if (hour >= 5 && hour < 10) period = 'morning';
+      else if (hour >= 10 && hour < 16) period = 'day';
+      else if (hour >= 16 && hour < 21) period = 'evening';
+      
+      periods[period].set(category, (periods[period].get(category) || 0) + 1);
+    });
+
+    return {
+      morning: Array.from(periods.morning.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, count]) => ({ name, count, color: categories.find(c => c.name === name)?.color || 'hsl(var(--muted))' })),
+      day: Array.from(periods.day.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, count]) => ({ name, count, color: categories.find(c => c.name === name)?.color || 'hsl(var(--muted))' })),
+      evening: Array.from(periods.evening.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, count]) => ({ name, count, color: categories.find(c => c.name === name)?.color || 'hsl(var(--muted))' })),
+      night: Array.from(periods.night.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, count]) => ({ name, count, color: categories.find(c => c.name === name)?.color || 'hsl(var(--muted))' }))
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -957,6 +1047,180 @@ const AnalyticsPage = () => {
                   />
                 </RadarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Category-Time Period Analysis */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Target className="w-6 h-6 text-primary" />
+            📊 Kategorie-Zeitperioden-Analyse
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Erkenne deine Muster: Welche Kategorien erledigst du wann? Nutze diese Insights für optimale Aufgabenplanung.
+          </p>
+          
+          <div className="grid gap-6">
+            {/* Category-Time Matrix Heatmap */}
+            <div className="rounded-xl bg-card border border-border p-4">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+                Kategorie-Zeitperioden-Matrix
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 font-semibold">Kategorie</th>
+                      <th className="text-center py-3 px-4 font-semibold">🌅 Morgen</th>
+                      <th className="text-center py-3 px-4 font-semibold">☀️ Tag</th>
+                      <th className="text-center py-3 px-4 font-semibold">🌆 Abend</th>
+                      <th className="text-center py-3 px-4 font-semibold">🌙 Nacht</th>
+                      <th className="text-center py-3 px-4 font-semibold">Gesamt</th>
+                      <th className="text-left py-3 px-4 font-semibold">Hauptzeit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getCategoryTimePeriodMatrix().map((row) => {
+                      const max = Math.max(row.morning, row.day, row.evening, row.night);
+                      return (
+                        <tr key={row.category} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: row.color }}
+                              />
+                              <span className="font-medium">{row.category}</span>
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <div 
+                              className="inline-block px-3 py-1 rounded-full font-semibold transition-all"
+                              style={{ 
+                                backgroundColor: row.morning > 0 
+                                  ? `hsl(43, 100%, ${100 - (row.morning / max) * 30}%)` 
+                                  : 'transparent',
+                                color: row.morning === max && row.morning > 0 ? '#000' : 'hsl(var(--foreground))'
+                              }}
+                            >
+                              {row.morning}
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <div 
+                              className="inline-block px-3 py-1 rounded-full font-semibold transition-all"
+                              style={{ 
+                                backgroundColor: row.day > 0 
+                                  ? `hsl(200, 90%, ${100 - (row.day / max) * 40}%)` 
+                                  : 'transparent',
+                                color: row.day === max && row.day > 0 ? '#000' : 'hsl(var(--foreground))'
+                              }}
+                            >
+                              {row.day}
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <div 
+                              className="inline-block px-3 py-1 rounded-full font-semibold transition-all"
+                              style={{ 
+                                backgroundColor: row.evening > 0 
+                                  ? `hsl(25, 95%, ${100 - (row.evening / max) * 35}%)` 
+                                  : 'transparent',
+                                color: row.evening === max && row.evening > 0 ? '#000' : 'hsl(var(--foreground))'
+                              }}
+                            >
+                              {row.evening}
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <div 
+                              className="inline-block px-3 py-1 rounded-full font-semibold transition-all"
+                              style={{ 
+                                backgroundColor: row.night > 0 
+                                  ? `hsl(240, 60%, ${100 - (row.night / max) * 50}%)` 
+                                  : 'transparent',
+                                color: row.night === max && row.night > 0 ? '#fff' : 'hsl(var(--foreground))'
+                              }}
+                            >
+                              {row.night}
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4 font-bold">{row.total}</td>
+                          <td className="py-3 px-4">
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ 
+                              backgroundColor: row.dominant === 'morning' ? 'hsl(43, 100%, 70%)' :
+                                              row.dominant === 'day' ? 'hsl(200, 90%, 60%)' :
+                                              row.dominant === 'evening' ? 'hsl(25, 95%, 65%)' : 
+                                              'hsl(240, 60%, 50%)',
+                              color: row.dominant === 'night' ? '#fff' : '#000'
+                            }}>
+                              {row.dominant === 'morning' ? '🌅 Morgen' :
+                               row.dominant === 'day' ? '☀️ Tag' :
+                               row.dominant === 'evening' ? '🌆 Abend' : '🌙 Nacht'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Top Categories per Time Period */}
+            <div className="grid lg:grid-cols-4 gap-4">
+              {(() => {
+                const topCategories = getTopCategoriesPerPeriod();
+                const periods = [
+                  { key: 'morning' as const, label: 'Morgen', icon: '🌅', color: 'hsl(43, 100%, 70%)' },
+                  { key: 'day' as const, label: 'Tag', icon: '☀️', color: 'hsl(200, 90%, 60%)' },
+                  { key: 'evening' as const, label: 'Abend', icon: '🌆', color: 'hsl(25, 95%, 65%)' },
+                  { key: 'night' as const, label: 'Nacht', icon: '🌙', color: 'hsl(240, 60%, 50%)' }
+                ];
+
+                return periods.map(period => (
+                  <div 
+                    key={period.key}
+                    className="rounded-xl border border-border p-4 transition-all hover:shadow-lg"
+                    style={{ 
+                      backgroundColor: `${period.color}15`,
+                      borderColor: period.color
+                    }}
+                  >
+                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <span className="text-xl">{period.icon}</span>
+                      <span style={{ color: period.color }}>{period.label}</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {topCategories[period.key].length > 0 ? (
+                        topCategories[period.key].map((cat, idx) => (
+                          <div 
+                            key={cat.name}
+                            className="flex items-center justify-between p-2 rounded-lg"
+                            style={{ backgroundColor: 'hsl(var(--background))' }}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="text-xs font-bold text-muted-foreground">{idx + 1}.</span>
+                              <div 
+                                className="w-2 h-2 rounded-full flex-shrink-0" 
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              <span className="text-xs font-medium truncate">{cat.name}</span>
+                            </div>
+                            <span className="text-xs font-bold ml-2" style={{ color: period.color }}>
+                              {cat.count}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">Keine Daten</p>
+                      )}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         </div>
