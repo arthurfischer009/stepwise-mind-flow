@@ -181,37 +181,30 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     touchElementRef.current = null;
   };
 
-  // Group tasks by time period based on their estimated start time
+  // Group tasks by their assigned time period (from database)
   const currentPeriod = getCurrentTimePeriod();
-  
-  // Calculate time period for each task based on estimated start time
-  const tasksWithPeriods = pendingTasks.map((task, index) => {
-    const startTime = getTaskStartTime(index);
-    const timePeriod = getTimePeriodForDate(startTime);
-    return { ...task, calculatedPeriod: timePeriod, startTime, originalIndex: index };
-  });
-  
+
   // Get current period index
   const currentPeriodIndex = TIME_PERIODS.findIndex(p => p.id === currentPeriod);
-  
+
   // Only show periods up to and including current period
-  // After night (21:00-5:00), no more periods should be shown as the day ends
+  // This prevents showing "Morning" section when it's already evening
   const visiblePeriods = TIME_PERIODS.slice(0, currentPeriodIndex + 1);
-  
+
   // Group tasks by period - only show tasks for visible periods
   const groupedTasks = visiblePeriods.map(period => ({
     period,
-    tasks: tasksWithPeriods.filter(t => t.calculatedPeriod === period.id),
+    tasks: pendingTasks.filter(t => t.time_period === period.id),
     isActive: period.id === currentPeriod
   })).sort((a, b) => {
     // Current period always first
     if (a.isActive) return -1;
     if (b.isActive) return 1;
-    
+
     // Then sort by period order (morning -> day -> evening -> night)
     const aIndex = TIME_PERIODS.findIndex(p => p.id === a.period.id);
     const bIndex = TIME_PERIODS.findIndex(p => p.id === b.period.id);
-    
+
     return aIndex - bIndex;
   });
 
