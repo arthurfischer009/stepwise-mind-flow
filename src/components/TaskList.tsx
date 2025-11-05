@@ -184,19 +184,14 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
   // Group tasks by their assigned time period (from database)
   const currentPeriod = getCurrentTimePeriod();
 
-  // Get current period index
-  const currentPeriodIndex = TIME_PERIODS.findIndex(p => p.id === currentPeriod);
-
-  // Only show periods up to and including current period
-  // This prevents showing "Morning" section when it's already evening
-  const visiblePeriods = TIME_PERIODS.slice(0, currentPeriodIndex + 1);
-
-  // Group tasks by period - only show tasks for visible periods
-  const groupedTasks = visiblePeriods.map(period => ({
+  // Show ALL time periods, but filter out empty ones and sort by priority
+  const groupedTasks = TIME_PERIODS.map(period => ({
     period,
     tasks: pendingTasks.filter(t => t.time_period === period.id),
     isActive: period.id === currentPeriod
-  })).sort((a, b) => {
+  }))
+  .filter(group => group.tasks.length > 0) // Only show periods with tasks
+  .sort((a, b) => {
     // Current period always first
     if (a.isActive) return -1;
     if (b.isActive) return 1;
