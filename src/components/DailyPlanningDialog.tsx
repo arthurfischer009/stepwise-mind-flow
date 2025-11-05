@@ -67,14 +67,14 @@ export const DailyPlanningDialog = ({
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = onExternalOpenChange || setInternalOpen;
 
-  const isUnlocked = completedCount >= 10;
-  const tasksRemaining = Math.max(0, 10 - completedCount);
+  const isUnlocked = true; // Always unlocked - removed 10 task requirement
+  const tasksRemaining = 0; // No longer needed
 
   useEffect(() => {
-    if (open && suggestions.length === 0 && isUnlocked) {
+    if (open && suggestions.length === 0) {
       loadSuggestions();
     }
-  }, [open, isUnlocked]);
+  }, [open]);
 
   // Reset points when suggestion changes
   useEffect(() => {
