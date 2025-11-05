@@ -181,19 +181,12 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
     touchElementRef.current = null;
   };
 
-  // Group tasks by time period based on their estimated start time
+  // Group tasks by their assigned time period (from database)
   const currentPeriod = getCurrentTimePeriod();
-  
-  // Calculate time period for each task based on estimated start time
-  const tasksWithPeriods = pendingTasks.map((task, index) => {
-    const startTime = getTaskStartTime(index);
-    const timePeriod = getTimePeriodForDate(startTime);
-    return { ...task, calculatedPeriod: timePeriod, startTime, originalIndex: index };
-  });
-  
+
   const groupedTasks = TIME_PERIODS.map(period => ({
     period,
-    tasks: tasksWithPeriods.filter(t => t.calculatedPeriod === period.id),
+    tasks: pendingTasks.filter(t => t.time_period === period.id),
     isActive: period.id === currentPeriod
   }));
 
