@@ -298,10 +298,9 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
               </div>
               
               <div className="space-y-1.5">
-                {periodTasks.map((task) => {
-                  const globalIndex = task.originalIndex;
+                {periodTasks.map((task, taskIndex) => {
+                  const globalIndex = pendingTasks.findIndex(t => t.id === task.id);
                   const categoryColor = task.category ? categoryColors[task.category] : undefined;
-                  const startTime = task.startTime;
                   const isBeingDragged = draggedIndex === globalIndex;
                   const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
                     ? touchCurrentY - touchStartY 
@@ -406,10 +405,6 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
                   <div className="font-medium text-sm truncate leading-tight">{task.title}</div>
                 )}
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: categoryColor ? 'white' : 'hsl(var(--muted-foreground))' }}>
-                    <Clock className="w-3 h-3" />
-                    <span>{format(startTime, 'HH:mm')}</span>
-                  </div>
                   {task.category && categoryColor && (
                     <div 
                       className="inline-block text-[10px] text-white font-semibold px-2 py-0.5 rounded-full"
