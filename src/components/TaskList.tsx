@@ -298,10 +298,10 @@ export const TaskList = ({ tasks, onDeleteTask, onReorderTasks, onUpdatePoints, 
               </div>
               
               <div className="space-y-1.5">
-                {periodTasks.map((task) => {
-                  const globalIndex = task.originalIndex;
+                {periodTasks.map((task, localIndex) => {
+                  const globalIndex = pendingTasks.findIndex(t => t.id === task.id);
                   const categoryColor = task.category ? categoryColors[task.category] : undefined;
-                  const startTime = task.startTime;
+                  const startTime = getTaskStartTime(globalIndex);
                   const isBeingDragged = draggedIndex === globalIndex;
                   const touchOffset = isBeingDragged && touchStartY !== null && touchCurrentY !== null 
                     ? touchCurrentY - touchStartY 

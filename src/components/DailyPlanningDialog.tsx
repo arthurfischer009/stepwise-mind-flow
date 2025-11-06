@@ -68,7 +68,6 @@ export const DailyPlanningDialog = ({
   const setOpen = onExternalOpenChange || setInternalOpen;
 
   const isUnlocked = true; // Always unlocked - removed 10 task requirement
-  const tasksRemaining = 0; // No longer needed
 
   useEffect(() => {
     if (open && suggestions.length === 0) {
@@ -172,53 +171,28 @@ export const DailyPlanningDialog = ({
   const progress = suggestions.length > 0 ? ((currentIndex + 1) / suggestions.length) * 100 : 0;
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen && !isUnlocked) {
-      toast({
-        title: "🔒 Feature gesperrt",
-        description: `Erledige noch ${tasksRemaining} Task${tasksRemaining !== 1 ? 's' : ''}, um "Plan your day" freizuschalten!`,
-      });
-      return;
-    }
     setOpen(newOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <div className="relative">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className={`rounded-full ${!isUnlocked ? 'opacity-50' : ''}`}
-          >
-            <Calendar className="w-5 h-5" />
-          </Button>
-          {!isUnlocked && (
-            <Badge 
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              variant="secondary"
-            >
-              {tasksRemaining}
-            </Badge>
-          )}
-        </div>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="rounded-full"
+        >
+          <Calendar className="w-5 h-5" />
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             Plan your day
-            {isUnlocked && (
-              <Badge variant="secondary" className="ml-2">
-                Freigeschaltet!
-              </Badge>
-            )}
           </DialogTitle>
           <DialogDescription>
-            {isUnlocked 
-              ? "Aufgaben, die du oft machst - wann möchtest du sie heute erledigen?"
-              : `Erledige noch ${tasksRemaining} Task${tasksRemaining !== 1 ? 's' : ''}, um diese Funktion freizuschalten`
-            }
+            Aufgaben, die du oft machst - wann möchtest du sie heute erledigen?
           </DialogDescription>
         </DialogHeader>
 
